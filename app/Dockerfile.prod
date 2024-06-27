@@ -19,6 +19,8 @@ COPY ./entrypoint.prod.sh .
 RUN sed -i 's/\r$//g' /furniture/entrypoint.prod.sh
 RUN chmod +x /furniture/entrypoint.prod.sh
 
+RUN mkdir staticfiles 
+
 COPY . .
 
 RUN chown -R abduvohid:abduvohid /furniture
