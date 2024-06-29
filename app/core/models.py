@@ -200,8 +200,7 @@ class Expense(BaseModel):
         ('MATERIAL_COST', 'MATERIAL_COST'),
         ('SALARY', 'SALARY'),
         ('TRANSPORT', 'TRANSPORT'),
-        ('DRIVER', 'DRIVER'),
-        ('COOKER', 'COOKER'),
+        ('OKLAD_PAYMENT', 'OKLAD_PAYMENT'),
         ('OTHER', 'OTHER')
     )
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='user_expense', null=True, blank=True)
@@ -222,20 +221,76 @@ class WorkerExpense(BaseModel):
         return str(self.worker)
 
 
+@receiver(pre_save, sender=WorkerProduct)
+def save_old_instance(sender, instance, **kwargs):
+    if instance.pk:
+        try:
+            instance._old_instance = WorkerProduct.objects.get(pk=instance.pk)
+        except WorkerProduct.DoesNotExist:
+            instance._old_instance = None
+
+
 @receiver(post_save, sender=WorkerProduct)
 def process_worker_product_changes(sender, instance, created, **kwargs):
     total_price = instance.qty * instance.product.price
     worker = instance.worker
 
     if created:
-        with transaction.atomic():
+        WorkerExpense.objects.create(worker=worker, price=total_price)
+    else:
+        old_instance = getattr(instance, '_old_instance', None)
+        if old_instance is not None:
+            old_total_price = old_instance.qty * old_instance.product.price
+            price_difference = total_price - old_total_price
+        else:
+            price_difference = total_price
+
+        worker_expense_qs = WorkerExpense.objects.filter(worker=worker)
+        if worker_expense_qs.exists():
+            worker_expense_total = worker_expense_qs.aggregate(total=Sum('price'))['total']
+            new_total_price = worker_expense_total + price_difference
+            worker_expense_qs.update(price=new_total_price)
+        else:
             WorkerExpense.objects.create(worker=worker, price=total_price)
-            Expense.objects.create(
-                worker=worker,
-                status='MATERIAL_COST',
-                price=total_price,
-                description='Buyurtma bajarish uchun olindi'
-            )
+
+    # Check if Expense exists for the worker
+    expense, created_exp = Expense.objects.get_or_create(
+        worker=worker,
+        status='MATERIAL_COST',
+        defaults={
+            'price': total_price,
+            'description': 'Buyurtma bajarish uchun olindi'
+        }
+    )
+    if not created_exp:
+        expense.price = WorkerExpense.objects.filter(worker=worker).aggregate(total=Sum('price'))['total']
+        expense.save()
+
+
+@receiver(pre_save, sender=WorkerExpense)
+def save_old_worker_expense_instance(sender, instance, **kwargs):
+    if instance.pk:
+        try:
+            instance._old_instance = WorkerExpense.objects.get(pk=instance.pk)
+        except WorkerExpense.DoesNotExist:
+            instance._old_instance = None
+
+
+@receiver(post_save, sender=WorkerExpense)
+def update_expense_on_worker_expense_change(sender, instance, created, **kwargs):
+    if created or getattr(instance, '_old_instance', None):
+        total_expense_price = WorkerExpense.objects.filter(worker=instance.worker).aggregate(total=Sum('price'))['total']
+        expense, created_exp = Expense.objects.get_or_create(
+            worker=instance.worker,
+            status='MATERIAL_COST',
+            defaults={
+                'price': total_expense_price,
+                'description': 'Buyurtma bajarish uchun olindi'
+            }
+        )
+        if not created_exp:
+            expense.price = total_expense_price
+            expense.save()
 
 
 # @receiver(post_save, sender=WorkerExpense)
@@ -258,7 +313,7 @@ def process_worker_product_changes(sender, instance, created, **kwargs):
 class CompanyProduct(BaseModel):
     name = models.CharField(max_length=255)
     price = models.PositiveIntegerField()
-    image = models.ImageField(default='defualt_order.jpg', upload_to='company-images/%d/',
+    image = models.ImageField(default='default_order.png', upload_to='company-images/%d/',
                               validators=[validate_image])
 
     def __str__(self):
@@ -360,7 +415,7 @@ class OrderAssignment(models.Model):
     def __str__(self):
         return f"{self.order.name} - {self.user.username} - Qty: {self.qty}"
 
-
+# BaseModel add kerak rm bolganda
 class WorkerProductOrder(models.Model):
     name = models.CharField(max_length=255)
     product_qty = models.IntegerField()

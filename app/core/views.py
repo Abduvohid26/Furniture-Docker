@@ -31,18 +31,9 @@ from rest_framework import viewsets
 class Product(APIView):
     permission_classes = [permissions.AllowAny]
 
-    # pagination_class = CustomPagination
-
-    # def get(self, request):
-    #     product = Enter.objects.all()
-    #     paginator = self.pagination_class()67
-    #     page = paginator.paginate_queryset(queryset=product, request=request)
-    #     serializer = ProductSerializer(page, many=True)
-    #     response =  paginator.get_paginated_response(data=serializer.data)
-    #     return Response(data=response.data, status=status.HTTP_200_OK)
     def get(self, request, *args, **kwargs):
-        product = Enter.objects.all()
-        serializer = ProductSerializer(product, many=True)
+        products = Enter.objects.filter(qty__gt=0)
+        serializer = ProductSerializer(products, many=True)
         return Response(data=serializer.data, status=status.HTTP_200_OK)
 
     def post(self, request):
@@ -74,7 +65,6 @@ class ProductDetail(APIView):
             serializer.save()
             return Response(data=serializer.data, status=status.HTTP_200_OK)
         return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
     def delete(self, request, id, *args, **kwargs):
         try:
@@ -641,7 +631,6 @@ class WorkStaticsFilterDateAPIView(APIView):
         return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-
 class FilterDateAIView(APIView):
     def post(self, request):
         serializer = FilterDateSerializer(data=request.data)
@@ -926,7 +915,7 @@ class WorkerProductGetAPIView(APIView):
                     'id': product.product.id,
                     'name': product.product.name,
                     'qty': product.qty,
-                    'price': product.product.price,
+                    'price': product.product.price * product.qty,
                     'ndc_price': product.product.ndc_price,
                     'measurement': product.product.measurement,
                     'category': product.product.category,
@@ -1137,6 +1126,19 @@ class CompanyNameView(APIView):
         except Exception as e:
             return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+    def patch(self, request, STIR):
+        try:
+            company_name = CompanyName.objects.get(STIR=STIR)
+        except CompanyName.DoesNotExist:
+            return Response({"detail": "Company not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        data = request.data
+        for attr, value in data.items():
+            setattr(company_name, attr, value)
+
+        company_name.save()
+        return Response({"detail": "Company information updated successfully."}, status=status.HTTP_200_OK)
+
 
 class SoldView(APIView):
     def get(self, request):
@@ -1295,7 +1297,7 @@ class CompanyBalanceView(APIView):
             company_id = serializer.validated_data['company'].id
             price = serializer.validated_data['price']
             company_balance_model = CompanyName.objects.get(id=company_id)
-            company_balance_model.balance += price
+            company_balance_model.balance -= price
             company_balance_model.save()
             serializer.save()
             return Response(data=serializer.data, status=status.HTTP_201_CREATED)
@@ -1337,8 +1339,11 @@ class CompanyNameSoldDetailView(APIView):
         except CompanyName.DoesNotExist:
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        solds = Sold.objects.filter(STIR=company_name.STIR)
-        custom_response = []
+        # Get the most recent Sold instance for the given CompanyName
+        sold = Sold.objects.filter(STIR=company_name.STIR).order_by('-created_at').first()
+
+        if not sold:
+            return Response({"detail": "No sales found for this company."}, status=status.HTTP_404_NOT_FOUND)
 
         company_info = {
             'id': company_name.id,
@@ -1348,45 +1353,45 @@ class CompanyNameSoldDetailView(APIView):
             'created_at': company_name.created_at,
         }
 
-        for sold in solds:
-            total_price = sold.total_price
-            ndc_price = sold.ndc_price
-            response_item = {
-                'id': sold.id,
-                'qty': sold.qty,
-                'price': sold.price,
-                'ndc': sold.ndc,
-                'STIR': sold.STIR,
-                'company_name': sold.company_name,
-                'total_price': total_price,
-                'ndc_price': ndc_price,
-                'payment_price': sold.payment_price,
-                'created_at': sold.created_at,
-                'worker_product_order': {}
-            }
-            if sold.worker_product_order:
-                response_item['worker_product_order'] = {
-                    'id': sold.worker_product_order.id,
-                    'name': sold.worker_product_order.name,
-                    'product_name': sold.worker_product_order.product_name,
-                    'product_qty': sold.worker_product_order.product_qty,
-                    'finish_product': {}
-                }
-                if sold.worker_product_order.finish_product:
-                    response_item['worker_product_order']['finish_product'] = {
-                        'id': sold.worker_product_order.finish_product.id,
-                        'work_proses': sold.worker_product_order.finish_product.work_proses,
-                        'order': {}
-                    }
-                    if sold.worker_product_order.finish_product.order:
-                        response_item['worker_product_order']['finish_product']['order'] = {
-                            'id': sold.worker_product_order.finish_product.order.id,
-                            'measurement': sold.worker_product_order.finish_product.order.measurement
-                        }
-            response_item.update(company_info)
-            custom_response.append(response_item)
+        total_price = sold.total_price
+        ndc_price = sold.ndc_price
+        response_item = {
+            'id': sold.id,
+            'qty': sold.qty,
+            'price': sold.price,
+            'ndc': sold.ndc,
+            'STIR': sold.STIR,
+            'company_name': sold.company_name,
+            'total_price': total_price,
+            'ndc_price': ndc_price,
+            'payment_price': sold.payment_price,
+            'created_at': sold.created_at,
+            'worker_product_order': {}
+        }
 
-        return Response(custom_response, status=status.HTTP_200_OK)
+        if sold.worker_product_order:
+            response_item['worker_product_order'] = {
+                'id': sold.worker_product_order.id,
+                'name': sold.worker_product_order.name,
+                'product_name': sold.worker_product_order.product_name,
+                'product_qty': sold.worker_product_order.product_qty,
+                'finish_product': {}
+            }
+            if sold.worker_product_order.finish_product:
+                response_item['worker_product_order']['finish_product'] = {
+                    'id': sold.worker_product_order.finish_product.id,
+                    'work_proses': sold.worker_product_order.finish_product.work_proses,
+                    'order': {}
+                }
+                if sold.worker_product_order.finish_product.order:
+                    response_item['worker_product_order']['finish_product']['order'] = {
+                        'id': sold.worker_product_order.finish_product.order.id,
+                        'measurement': sold.worker_product_order.finish_product.order.measurement
+                    }
+
+        response_item.update(company_info)
+
+        return Response(response_item, status=status.HTTP_200_OK)
 
 
 class CompanyNameProductView(APIView):
