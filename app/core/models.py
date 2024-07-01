@@ -43,7 +43,7 @@ class Enter(BaseModel):
     dollor_course = models.PositiveIntegerField()
     description = models.TextField()
     category = models.CharField(max_length=255, choices=CATEGORY, default='mahsulot')
-    STIR = models.CharField(max_length=9)
+    STIR = models.CharField(max_length=14)
     company_name = models.CharField(max_length=1000)
     payment_price = models.IntegerField(default=0)
 
@@ -325,7 +325,7 @@ class Sold(BaseModel):
     qty = models.PositiveIntegerField()
     price = models.PositiveIntegerField()
     ndc = models.PositiveIntegerField(default=12)
-    STIR = models.CharField(max_length=9, blank=True, null=True)
+    STIR = models.CharField(max_length=14, blank=True, null=True)
     company_name = models.CharField(max_length=1000, blank=True, null=True)
     payment_price = models.IntegerField(default=0)
 
@@ -364,7 +364,7 @@ class Sold(BaseModel):
 
 class CompanyName(BaseModel):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
-    STIR = models.CharField(max_length=9)
+    STIR = models.CharField(max_length=14)
     company_name = models.CharField(max_length=1000)
     sold = models.ForeignKey(Sold, on_delete=models.CASCADE, null=True, blank=True)
     product = models.ForeignKey(Enter, on_delete=models.CASCADE, null=True, blank=True, related_name='company_names')
@@ -416,6 +416,8 @@ class OrderAssignment(models.Model):
         return f"{self.order.name} - {self.user.username} - Qty: {self.qty}"
 
 # BaseModel add kerak rm bolganda
+
+
 class WorkerProductOrder(models.Model):
     name = models.CharField(max_length=255)
     product_qty = models.IntegerField()
