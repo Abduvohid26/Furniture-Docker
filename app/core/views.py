@@ -1246,8 +1246,8 @@ class SuccessOrderView(APIView):
 class FinishedProductView(APIView):
     def get(self, request):
         finish_products = FinishedProduct.objects.all()
-        finish_products_to_delete = finish_products.filter(work_proses=0)
-        finish_products_to_delete.delete()
+        # finish_products_to_delete = finish_products.filter(work_proses=0)
+        # finish_products_to_delete.delete()
         serializer = FinishedProductGetSerializer(instance=finish_products, many=True)
         return Response(data=serializer.data, status=status.HTTP_200_OK)
 
