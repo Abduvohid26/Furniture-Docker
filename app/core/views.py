@@ -1525,39 +1525,6 @@ class WorkerProductOrderView(APIView):
         orders_list = list(orders_dict.values())
         serializer = WorkerProductOrderDetailSerializer(orders_list, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
-    # def get(self, request):
-    #     worker_product_orders = WorkerProductOrder.objects.all()
-    #     orders_dict = {}
-    #
-    #     for order in worker_product_orders:
-    #         key = (order.name, order.product_qty)
-    #         if key not in orders_dict:
-    #             orders_dict[key] = {
-    #                 'id': order.id,
-    #                 'name': order.name,
-    #                 'product_qty': order.product_qty,
-    #                 'products': {}
-    #             }
-    #
-    #         product_key = order.finish_product.id
-    #         if product_key not in orders_dict[key]['products']:
-    #             orders_dict[key]['products'][product_key] = {
-    #                 'finish_product': str(order.finish_product.id),
-    #                 'qty': order.qty,
-    #                 'product_name': order.product_name,
-    #                 'product_qty': order.product_qty
-    #             }
-    #         else:
-    #             orders_dict[key]['products'][product_key]['qty'] += order.qty
-    #             orders_dict[key]['products'][product_key]['product_qty'] += order.product_qty
-    #
-    #     orders_list = []
-    #     for order_data in orders_dict.values():
-    #         order_data['products'] = list(order_data['products'].values())
-    #         orders_list.append(order_data)
-    #
-    #     serializer = WorkerProductOrderDetailSerializer(orders_list, many=True)
-    #     return Response(serializer.data, status=status.HTTP_200_OK)
 
     def post(self, request):
         serializer = WorkerProductOrderSerializer(data=request.data)
@@ -1578,7 +1545,15 @@ class WorkerProductOrderView(APIView):
                         if created:
                             finish_product_model.work_proses = qty
                         else:
-                            finish_product_model.work_proses -= qty
+                            new_work_proses = finish_product_model.work_proses - qty
+                            if new_work_proses < 0:
+                                return Response(
+                                    data={
+                                        'error': f'Bu {qty} bazadagidan kop {finish_product_model.work_proses}'
+                                    },
+                                    status=status.HTTP_400_BAD_REQUEST
+                                )
+                            finish_product_model.work_proses = new_work_proses
 
                         finish_product_model.save()
 
