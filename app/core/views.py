@@ -1226,14 +1226,56 @@ class SoldView(APIView):
 
 
 class SoldDetailView(APIView):
+    def get(self, request, id):
+        try:
+            sold = Sold.objects.get(id=id)
+        except Sold.DoesNotExist:
+            return Response(data={'Sold not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        custom_response = {
+            'id': sold.id,
+            'qty': sold.qty,
+            'price': sold.price,
+            'ndc': sold.ndc,
+            'STIR': sold.STIR,
+            'company_name': sold.company_name,
+            'worker_product_order': {
+                'id': sold.worker_product_order.id,
+                'name': sold.worker_product_order.name,
+                'product_qty': sold.worker_product_order.product_qty,
+                'product_name': sold.worker_product_order.product_name,
+                'qty': sold.worker_product_order.qty,
+                'finish_product': [
+                    {
+                        'id': sold.worker_product_order.finish_product.id,
+                        'work_proses': sold.worker_product_order.finish_product.work_proses
+                    }
+                ]
+            } if sold.worker_product_order else None
+        }
+
+        return Response(custom_response, status=status.HTTP_200_OK)
+
     def delete(self, request, id):
         try:
             sold = Sold.objects.get(id=id)
-        except:
+        except Sold.DoesNotExist:
             return Response(data={'Sold not found'}, status=status.HTTP_400_BAD_REQUEST)
 
         sold.delete()
-        return Response(data={'Sold successfully deleted'})
+        return Response(data={'Sold successfully deleted'}, status=status.HTTP_200_OK)
+
+    def patch(self, request, id):
+        try:
+            sold = Sold.objects.get(id=id)
+        except Sold.DoesNotExist:
+            return Response(data={'Sold not found'}, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = SoldSerializer(sold, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class SuccessOrderView(APIView):

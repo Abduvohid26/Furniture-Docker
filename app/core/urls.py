@@ -55,7 +55,7 @@ urlpatterns = [
     path('no-active-order/', NoActiveOrder.as_view()),
     path('company-name/<str:STIR>/', CompanyNameView.as_view()),
     path('company-name/', CompanyNameGetView.as_view()),
-    path('sold/<int:id>/', SoldDetailView.as_view()),
+    path('sold/<uuid:id>/', SoldDetailView.as_view()),
     path('sold/', SoldView.as_view()),
     path('success-order/', SuccessOrderView.as_view()),
     path('finish-product/', FinishedProductView.as_view()),
