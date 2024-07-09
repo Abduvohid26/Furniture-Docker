@@ -30,7 +30,7 @@ class LoginApiView(generics.CreateAPIView):
                     'refresh_token': user.token()['refresh_token'],
                     'username': user.username,
                     'roles': user.user_roles,
-                    'user_image_url': user.image.url if user.image else f'https://custom.uz/media/users-images/2024/06/13/default_profile_pic.jpeg'
+                    'user_image_url': user.image.url if user.image else f'http://crm.abduvohid2629.uz/media/default.svg'
                 }, status=status.HTTP_200_OK
             )
         else:
