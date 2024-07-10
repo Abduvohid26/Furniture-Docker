@@ -298,13 +298,14 @@ class WorkerProductRejectView(APIView):
             return Response(
                 data={
                     'success': False,
-                    'message': 'Reject products found for this user'
+                    'message': 'No reject products found for this user'
                 },
                 status=status.HTTP_404_NOT_FOUND
             )
 
         serializer = WorkerProductSendGetAdminSerializer(instance=worker_products, many=True)
         return Response(data=serializer.data, status=status.HTTP_200_OK)
+
 
 
 class MessageSendAPIView(APIView):
@@ -1141,33 +1142,83 @@ class CompanyNameView(APIView):
 
 
 class SoldView(APIView):
+
     def get(self, request):
-        solds = Sold.objects.all()
-        custom_response = [
-            {
-                'id': sold.id,
-                'qty': sold.qty,
-                'price': sold.price,
-                'ndc': sold.ndc,
-                'STIR': sold.STIR,
-                'company_name': sold.company_name,
-                'worker_product_order': {
-                    'id': sold.worker_product_order.id,
-                    'name': sold.worker_product_order.name,
-                    'product_qty': sold.worker_product_order.product_qty,
-                    'product_name': sold.worker_product_order.product_name,
-                    'qty': sold.worker_product_order.qty,
-                    'finish_product': [
-                        {
-                            'id': sold.worker_product_order.finish_product.id,
-                            'work_proses': sold.worker_product_order.finish_product.work_proses
+        try:
+            # STIR bo'yicha company_name larni topish
+            stirs = Sold.objects.values('STIR', 'company_name').annotate(total_qty=Sum('qty'))
+
+            custom_response = []
+            for stir_info in stirs:
+                stir = stir_info['STIR']
+                company_name = stir_info['company_name']
+                total_qty = stir_info['total_qty']
+
+                # STIR va company_name bo'yicha mahsulotlarni qidirish
+                solds = Sold.objects.filter(STIR=stir, company_name=company_name)
+
+                # Biriktirilgan ma'lumotlarni custom_response ga qo'shish
+                sold_items = {
+                    'STIR': stir,
+                    'company_name': company_name,
+                    'total_qty': total_qty,
+                    'sold_products': []
+                }
+
+                for sold in solds:
+                    sold_item = {
+                        'id': sold.id,
+                        'qty': sold.qty,
+                        'price': sold.price,
+                        'ndc': sold.ndc,
+                        'worker_product_order': {
+                            'id': sold.worker_product_order.id,
+                            'name': sold.worker_product_order.name,
+                            'product_qty': sold.worker_product_order.product_qty,
+                            'product_name': sold.worker_product_order.product_name,
+                            'qty': sold.worker_product_order.qty,
+                            'finish_product': [
+                                {
+                                    'id': sold.worker_product_order.finish_product.id,
+                                    'work_proses': sold.worker_product_order.finish_product.work_proses
+                                }
+                            ]
                         }
-                    ]
-                } if sold.worker_product_order else None
-            }
-            for sold in solds
-        ]
-        return Response(custom_response, status=status.HTTP_200_OK)
+                    }
+                    sold_items['sold_products'].append(sold_item)
+
+                custom_response.append(sold_items)
+
+            return Response(custom_response, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        # solds = Sold.objects.all()
+        # custom_response = [
+        #     {
+        #         'id': sold.id,
+        #         'qty': sold.qty,
+        #         'price': sold.price,
+        #         'ndc': sold.ndc,
+        #         'STIR': sold.STIR,
+        #         'company_name': sold.company_name,
+        #         'worker_product_order': {
+        #             'id': sold.worker_product_order.id,
+        #             'name': sold.worker_product_order.name,
+        #             'product_qty': sold.worker_product_order.product_qty,
+        #             'product_name': sold.worker_product_order.product_name,
+        #             'qty': sold.worker_product_order.qty,
+        #             'finish_product': [
+        #                 {
+        #                     'id': sold.worker_product_order.finish_product.id,
+        #                     'work_proses': sold.worker_product_order.finish_product.work_proses
+        #                 }
+        #             ]
+        #         } if sold.worker_product_order else None
+        #     }
+        #     for sold in solds
+        # ]
+        # return Response(custom_response, status=status.HTTP_200_OK)
 
     def post(self, request):
         serializer = SoldSerializer(data=request.data)
@@ -1180,48 +1231,71 @@ class SoldView(APIView):
 
             if worker_product_order_id is not None:
                 try:
-                    worker_product_order = WorkerProductOrder.objects.get(id=worker_product_order_id)
+                    with transaction.atomic():
+                        worker_product_order = WorkerProductOrder.objects.select_for_update().get(
+                            id=worker_product_order_id)
+
+                        # Check if a Sold instance already exists for this WorkerProductOrder, STIR, and company
+                        sold_instance = Sold.objects.filter(
+                            worker_product_order=worker_product_order,
+                            STIR=STIR,
+                            company_name=company_name
+                        ).first()
+
+                        if sold_instance:
+                            # If a Sold instance already exists, update the quantity
+                            sold_instance.qty += qty
+                            sold_instance.save()
+                        else:
+                            # Create a new Sold instance
+                            sold_instance = Sold(
+                                worker_product_order=worker_product_order,
+                                qty=qty,
+                                price=price,
+                                ndc=serializer.validated_data.get('ndc', 12),
+                                STIR=STIR,
+                                company_name=company_name
+                            )
+                            sold_instance.save()
+
+                            # Create new CompanyName if not exists
+                            sold_instance.create_company_name()
+
+                        # Update WorkerProductOrder quantity
+                        worker_product_order.product_qty -= qty
+                        worker_product_order.save()
+
+                    # Fetch updated sold records
+                    solds = Sold.objects.filter(worker_product_order=worker_product_order)
+
+                    custom_response = [
+                        {
+                            'id': sold.id,
+                            'qty': sold.qty,
+                            'price': sold.price,
+                            'ndc': sold.ndc,
+                            'STIR': sold.STIR,
+                            'company_name': sold.company_name,
+                            'worker_product_order': {
+                                'id': sold.worker_product_order.id,
+                                'name': sold.worker_product_order.name,
+                                'product_qty': sold.worker_product_order.product_qty,
+                                'product_name': sold.worker_product_order.product_name,
+                                'qty': sold.worker_product_order.qty
+                            }
+                        }
+                        for sold in solds
+                    ]
+                    return Response(custom_response, status=status.HTTP_200_OK)
+
                 except WorkerProductOrder.DoesNotExist:
                     return Response({'error': 'Worker product order not found'}, status=status.HTTP_404_NOT_FOUND)
+                except Exception as e:
+                    return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-                with transaction.atomic():
-                    sold = Sold(
-                        worker_product_order=worker_product_order,
-                        qty=qty,
-                        price=price,
-                        ndc=serializer.validated_data.get('ndc', 12),
-                        STIR=STIR,
-                        company_name=company_name
-                    )
-                    sold.save()
-
-                    # WorkerProductOrder obyektining `product_qty` qiymatini kamaytirish
-                    worker_product_order.product_qty -= qty
-                    worker_product_order.save()
-
-                solds = Sold.objects.filter(worker_product_order=worker_product_order)
-
-                custom_response = [
-                    {
-                        'id': sold.id,
-                        'qty': sold.qty,
-                        'price': sold.price,
-                        'ndc': sold.ndc,
-                        'STIR': sold.STIR,
-                        'company_name': sold.company_name,
-                        'worker_product_order': {
-                            'id': sold.worker_product_order.id,
-                            'name': sold.worker_product_order.name,
-                            'product_qty': sold.worker_product_order.product_qty,
-                            'product_name': sold.worker_product_order.product_name,
-                            'qty': sold.worker_product_order.qty
-                        }
-                    }
-                    for sold in solds
-                ]
-                return Response(custom_response, status=status.HTTP_200_OK)
             else:
                 return Response({'error': 'Worker product order ID is required'}, status=status.HTTP_400_BAD_REQUEST)
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -1377,63 +1451,71 @@ class CompanyNameSoldView(APIView):
 class CompanyNameSoldDetailView(APIView):
     def get(self, request, id):
         try:
-            company_name = CompanyName.objects.exclude(sold__isnull=True).get(id=id)
-        except CompanyName.DoesNotExist:
-            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+            # CompanyName obyektini olish
+            company = CompanyName.objects.get(id=id)
 
-        # Get the most recent Sold instance for the given CompanyName
-        sold = Sold.objects.filter(STIR=company_name.STIR).order_by('-created_at').first()
+            # STIR va company_name bo'yicha mahsulotlarni qidirish
+            stirs = Sold.objects.filter(STIR=company.STIR, company_name=company.company_name).values('STIR',
+                                                                                                     'company_name').annotate(
+                total_qty=Sum('qty'))
 
-        if not sold:
-            return Response({"detail": "No sales found for this company."}, status=status.HTTP_404_NOT_FOUND)
+            custom_response = []
+            for stir_info in stirs:
+                stir = stir_info['STIR']
+                company_name = stir_info['company_name']
+                total_qty = stir_info['total_qty']
 
-        company_info = {
-            'id': company_name.id,
-            'STIR': company_name.STIR,
-            'company_name': company_name.company_name,
-            'balance': company_name.balance,
-            'created_at': company_name.created_at,
-        }
+                # STIR va company_name bo'yicha mahsulotlarni qidirish
+                solds = Sold.objects.filter(STIR=stir, company_name=company_name)
 
-        total_price = sold.total_price
-        ndc_price = sold.ndc_price
-        response_item = {
-            'id': sold.id,
-            'qty': sold.qty,
-            'price': sold.price,
-            'ndc': sold.ndc,
-            'STIR': sold.STIR,
-            'company_name': sold.company_name,
-            'total_price': total_price,
-            'ndc_price': ndc_price,
-            'payment_price': sold.payment_price,
-            'created_at': sold.created_at,
-            'worker_product_order': {}
-        }
-
-        if sold.worker_product_order:
-            response_item['worker_product_order'] = {
-                'id': sold.worker_product_order.id,
-                'name': sold.worker_product_order.name,
-                'product_name': sold.worker_product_order.product_name,
-                'product_qty': sold.worker_product_order.product_qty,
-                'finish_product': {}
-            }
-            if sold.worker_product_order.finish_product:
-                response_item['worker_product_order']['finish_product'] = {
-                    'id': sold.worker_product_order.finish_product.id,
-                    'work_proses': sold.worker_product_order.finish_product.work_proses,
-                    'order': {}
-                }
-                if sold.worker_product_order.finish_product.order:
-                    response_item['worker_product_order']['finish_product']['order'] = {
-                        'id': sold.worker_product_order.finish_product.order.id,
-                        'measurement': sold.worker_product_order.finish_product.order.measurement
+                # Sold instantsiyalari uchun javob tayyorlash
+                sold_products = []
+                for sold in solds:
+                    sold_item = {
+                        'id': sold.id,
+                        'qty': sold.qty,
+                        'price': sold.price,
+                        'ndc': sold.ndc,
+                        'ndc_price': sold.ndc_price,
+                        'worker_product_order': {
+                            'id': sold.worker_product_order.id,
+                            'name': sold.worker_product_order.name,
+                            'product_qty': sold.worker_product_order.product_qty,
+                            'product_name': sold.worker_product_order.product_name,
+                            'qty': sold.worker_product_order.qty,
+                            'finish_product': [
+                                {
+                                    'id': sold.worker_product_order.finish_product.id,
+                                    'work_proses': sold.worker_product_order.finish_product.work_proses,
+                                    'order': {
+                                        'id': sold.worker_product_order.finish_product.order.id,
+                                        'measurement': sold.worker_product_order.finish_product.order.measurement
+                                    }
+                                }
+                            ]
+                        }
                     }
+                    sold_products.append(sold_item)
 
-        response_item.update(company_info)
+                # Biriktirilgan ma'lumotlarni custom_response ga qo'shish
+                solds_response = {
+                    'id': company.id,
+                    'STIR': stir,
+                    'company_name': company_name,
+                    'total_qty': total_qty,
+                    'balance': company.balance,
+                    'created_at': company.created_at,
+                    'sold_products': sold_products
+                }
+                custom_response.append(solds_response)
 
-        return Response(response_item, status=status.HTTP_200_OK)
+            return Response(custom_response, status=status.HTTP_200_OK)
+
+        except CompanyName.DoesNotExist:
+            return Response({"detail": "Company with the specified ID does not exist."},
+                            status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class CompanyNameProductView(APIView):

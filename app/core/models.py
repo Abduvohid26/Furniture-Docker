@@ -89,6 +89,7 @@ class Enter(BaseModel):
             total = self.payment_price - self.ndc_price
             company.balance += total
             company.save()
+
             return company
 
     def save(self, *args, **kwargs):
@@ -346,16 +347,18 @@ class Sold(BaseModel):
 
     def create_company_name(self):
         try:
-            company = CompanyName.objects.get(STIR=self.STIR)
+            company = CompanyName.objects.get(STIR=self.STIR, company_name=self.company_name)
         except CompanyName.DoesNotExist:
-            balance = self.ndc_price if self.payment_price == 0 else self.ndc_price - self.payment_price
-            CompanyName.objects.create(sold_id=self.id, STIR=self.STIR, company_name=self.company_name,
-                                       balance=balance)
+            balance = self.qty * self.price  # Calculate balance as needed
+            CompanyName.objects.create(
+                sold=self,
+                STIR=self.STIR,
+                company_name=self.company_name,
+                balance=balance
+            )
         else:
-            total = self.ndc_price - self.payment_price
-            company.balance += total
+            company.balance += self.qty * self.price  # Update balance if company exists
             company.save()
-            return company
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
@@ -366,7 +369,7 @@ class CompanyName(BaseModel):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
     STIR = models.CharField(max_length=14)
     company_name = models.CharField(max_length=1000)
-    sold = models.ForeignKey(Sold, on_delete=models.CASCADE, null=True, blank=True)
+    sold = models.ForeignKey(Sold, on_delete=models.CASCADE, null=True, blank=True, related_name='company')
     product = models.ForeignKey(Enter, on_delete=models.CASCADE, null=True, blank=True, related_name='company_names')
     balance = models.IntegerField()
 
