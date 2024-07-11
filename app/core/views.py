@@ -1451,10 +1451,7 @@ class CompanyNameSoldView(APIView):
 class CompanyNameSoldDetailView(APIView):
     def get(self, request, id):
         try:
-            # CompanyName obyektini olish
             company = CompanyName.objects.get(id=id)
-
-            # STIR va company_name bo'yicha mahsulotlarni qidirish
             stirs = Sold.objects.filter(STIR=company.STIR, company_name=company.company_name).values('STIR',
                                                                                                      'company_name').annotate(
                 total_qty=Sum('qty'))
@@ -1464,11 +1461,7 @@ class CompanyNameSoldDetailView(APIView):
                 stir = stir_info['STIR']
                 company_name = stir_info['company_name']
                 total_qty = stir_info['total_qty']
-
-                # STIR va company_name bo'yicha mahsulotlarni qidirish
                 solds = Sold.objects.filter(STIR=stir, company_name=company_name)
-
-                # Sold instantsiyalari uchun javob tayyorlash
                 sold_products = []
                 for sold in solds:
                     sold_item = {
@@ -1496,8 +1489,6 @@ class CompanyNameSoldDetailView(APIView):
                         }
                     }
                     sold_products.append(sold_item)
-
-                # Biriktirilgan ma'lumotlarni custom_response ga qo'shish
                 solds_response = {
                     'id': company.id,
                     'STIR': stir,
@@ -1681,7 +1672,6 @@ class WorkerProductOrderView(APIView):
 
                         finish_product_model.save()
 
-                        # WorkerProductOrder mavjudligini tekshirish va yangilash
                         existing_order = WorkerProductOrder.objects.filter(name=name, finish_product=finish_product_model, product_name=product_name).first()
 
                         if existing_order:
@@ -1718,7 +1708,6 @@ class WorkerProductOrderDetailView(APIView):
             'products': []
         }
 
-        # Retrieve all related WorkerProductOrder instances
         related_products = WorkerProductOrder.objects.filter(name=order.name, product_qty=order.product_qty)
 
         for product_order in related_products:
@@ -1729,13 +1718,24 @@ class WorkerProductOrderDetailView(APIView):
             }
             response_data['products'].append(product_data)
 
-        # Returning the response
         return Response([response_data], status=status.HTTP_200_OK)
 
     def delete(self, request, id):
         try:
             order = get_object_or_404(WorkerProductOrder, id=id)
-        except:
-            return Response(data={'Worker Product Order not found'})
-        order.delete()
-        return Response(data={'Worker Product Order successfully deleted'})
+            products = WorkerProductOrder.objects.filter(name=order.name, product_qty=order.product_qty)
+
+            with transaction.atomic():
+                for product_order in products:
+                    finish_product = product_order.finish_product
+                    finish_product.work_proses += product_order.qty
+                    finish_product.save()
+
+                order.delete()
+
+            return Response(data={'Worker Product Order successfully deleted'}, status=status.HTTP_204_NO_CONTENT)
+
+        except WorkerProductOrder.DoesNotExist:
+            return Response(data={'error': 'Worker Product Order not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response(data={'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
