@@ -1723,15 +1723,15 @@ class WorkerProductOrderDetailView(APIView):
     def delete(self, request, id):
         try:
             order = get_object_or_404(WorkerProductOrder, id=id)
-            products = WorkerProductOrder.objects.filter(name=order.name, product_qty=order.product_qty)
+            related_orders = WorkerProductOrder.objects.filter(name=order.name, product_qty=order.product_qty)
 
             with transaction.atomic():
-                for product_order in products:
+                for product_order in related_orders:
                     finish_product = product_order.finish_product
                     finish_product.work_proses += product_order.qty
                     finish_product.save()
 
-                order.delete()
+                related_orders.delete()
 
             return Response(data={'Worker Product Order successfully deleted'}, status=status.HTTP_204_NO_CONTENT)
 
