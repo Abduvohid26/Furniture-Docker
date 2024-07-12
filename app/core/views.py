@@ -1162,11 +1162,12 @@ class SoldGetView(APIView):
                 }
 
                 for sold in solds:
+                    # Access only one finish_product per worker_product_order
                     finish_product = None
-                    if sold.worker_product_order.finish_product.exists():
+                    if sold.worker_product_order.finish_product:
                         finish_product = {
-                            'id': sold.worker_product_order.finish_product.first().id,
-                            'work_proses': sold.worker_product_order.finish_product.first().work_proses
+                            'id': sold.worker_product_order.finish_product.id,
+                            'work_proses': sold.worker_product_order.finish_product.work_proses
                         }
 
                     sold_item = {
@@ -1191,6 +1192,7 @@ class SoldGetView(APIView):
 
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 
 class SoldView(APIView):
