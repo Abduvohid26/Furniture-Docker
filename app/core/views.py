@@ -1154,15 +1154,7 @@ class SoldGetView(APIView):
 
                 solds = Sold.objects.filter(STIR=stir, company_name=company_name)
 
-                sold_items = {
-                    'STIR': stir,
-                    'company_name': company_name,
-                    'total_qty': total_qty,
-                    'sold_products': []
-                }
-
                 for sold in solds:
-                    # Access only one finish_product per worker_product_order
                     finish_product = None
                     if sold.worker_product_order.finish_product:
                         finish_product = {
@@ -1171,28 +1163,30 @@ class SoldGetView(APIView):
                         }
 
                     sold_item = {
-                        'id': sold.id,
-                        'qty': sold.qty,
-                        'price': sold.price,
-                        'ndc': sold.ndc,
-                        'worker_product_order': {
-                            'id': sold.worker_product_order.id,
-                            'name': sold.worker_product_order.name,
-                            'product_qty': sold.worker_product_order.product_qty,
-                            'product_name': sold.worker_product_order.product_name,
-                            'qty': sold.worker_product_order.qty,
-                            'finish_product': finish_product
-                        }
+                        'STIR': stir,
+                        'company_name': company_name,
+                        'total_qty': total_qty,
+                        'sold_products': [{
+                            'id': sold.id,
+                            'qty': sold.qty,
+                            'price': sold.price,
+                            'ndc': sold.ndc,
+                            'worker_product_order': {
+                                'id': sold.worker_product_order.id,
+                                'name': sold.worker_product_order.name,
+                                'product_qty': sold.worker_product_order.product_qty,
+                                'product_name': sold.worker_product_order.product_name,
+                                'qty': sold.worker_product_order.qty,
+                                'finish_product': finish_product
+                            }
+                        }]
                     }
-                    sold_items['sold_products'].append(sold_item)
-
-                custom_response.append(sold_items)
+                    custom_response.append(sold_item)
 
             return Response(custom_response, status=status.HTTP_200_OK)
 
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 
 class SoldView(APIView):
