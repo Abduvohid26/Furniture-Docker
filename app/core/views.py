@@ -1141,11 +1141,9 @@ class CompanyNameView(APIView):
         return Response({"detail": "Company information updated successfully."}, status=status.HTTP_200_OK)
 
 
-class SoldView(APIView):
-
+class SoldGetView(APIView):
     def get(self, request):
         try:
-            # STIR bo'yicha company_name larni topish
             stirs = Sold.objects.values('STIR', 'company_name').annotate(total_qty=Sum('qty'))
 
             custom_response = []
@@ -1154,10 +1152,61 @@ class SoldView(APIView):
                 company_name = stir_info['company_name']
                 total_qty = stir_info['total_qty']
 
-                # STIR va company_name bo'yicha mahsulotlarni qidirish
                 solds = Sold.objects.filter(STIR=stir, company_name=company_name)
 
-                # Biriktirilgan ma'lumotlarni custom_response ga qo'shish
+                sold_items = {
+                    'STIR': stir,
+                    'company_name': company_name,
+                    'total_qty': total_qty,
+                    'sold_products': []
+                }
+
+                for sold in solds:
+                    finish_product = None
+                    if sold.worker_product_order.finish_product.exists():
+                        finish_product = {
+                            'id': sold.worker_product_order.finish_product.first().id,
+                            'work_proses': sold.worker_product_order.finish_product.first().work_proses
+                        }
+
+                    sold_item = {
+                        'id': sold.id,
+                        'qty': sold.qty,
+                        'price': sold.price,
+                        'ndc': sold.ndc,
+                        'worker_product_order': {
+                            'id': sold.worker_product_order.id,
+                            'name': sold.worker_product_order.name,
+                            'product_qty': sold.worker_product_order.product_qty,
+                            'product_name': sold.worker_product_order.product_name,
+                            'qty': sold.worker_product_order.qty,
+                            'finish_product': finish_product
+                        }
+                    }
+                    sold_items['sold_products'].append(sold_item)
+
+                custom_response.append(sold_items)
+
+            return Response(custom_response, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class SoldView(APIView):
+
+    def get(self, request):
+        try:
+            stirs = Sold.objects.values('STIR', 'company_name').annotate(total_qty=Sum('qty'))
+
+            custom_response = []
+            for stir_info in stirs:
+                stir = stir_info['STIR']
+                company_name = stir_info['company_name']
+                total_qty = stir_info['total_qty']
+
+                solds = Sold.objects.filter(STIR=stir, company_name=company_name)
+
                 sold_items = {
                     'STIR': stir,
                     'company_name': company_name,
@@ -1193,32 +1242,6 @@ class SoldView(APIView):
 
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        # solds = Sold.objects.all()
-        # custom_response = [
-        #     {
-        #         'id': sold.id,
-        #         'qty': sold.qty,
-        #         'price': sold.price,
-        #         'ndc': sold.ndc,
-        #         'STIR': sold.STIR,
-        #         'company_name': sold.company_name,
-        #         'worker_product_order': {
-        #             'id': sold.worker_product_order.id,
-        #             'name': sold.worker_product_order.name,
-        #             'product_qty': sold.worker_product_order.product_qty,
-        #             'product_name': sold.worker_product_order.product_name,
-        #             'qty': sold.worker_product_order.qty,
-        #             'finish_product': [
-        #                 {
-        #                     'id': sold.worker_product_order.finish_product.id,
-        #                     'work_proses': sold.worker_product_order.finish_product.work_proses
-        #                 }
-        #             ]
-        #         } if sold.worker_product_order else None
-        #     }
-        #     for sold in solds
-        # ]
-        # return Response(custom_response, status=status.HTTP_200_OK)
 
     def post(self, request):
         serializer = SoldSerializer(data=request.data)
