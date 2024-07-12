@@ -69,4 +69,5 @@ urlpatterns = [
     path('company-name-sold/<uuid:id>/', CompanyNameSoldDetailView.as_view()),
     path('worker-product-order/', WorkerProductOrderView.as_view()),
     path('worker-product-order/<int:id>/', WorkerProductOrderDetailView.as_view()),
+    path('salom/qale', include(router.urls)),
 ]
