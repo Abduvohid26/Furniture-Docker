@@ -1449,6 +1449,15 @@ class CompanyBalanceDetailView(APIView):
         company = get_object_or_404(CompanyBalance, id=id)
         serializer = CompanyBalanceGetSerializer(company, partial=True)
         return Response(data=serializer.data, status=status.HTTP_200_OK)
+    
+    def delete(self, request, id):
+        try:
+            company = get_object_or_404(CompanyBalance, id=id)
+        except:
+            return Response(data='Company balance not found')
+        
+        company.delete()
+        return Response(data={'Successfully deleted'})
 
 
 class WorkExpenseView(APIView):
