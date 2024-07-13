@@ -1254,7 +1254,6 @@ class SoldView(APIView):
                         worker_product_order = WorkerProductOrder.objects.select_for_update().get(
                             id=worker_product_order_id)
 
-                        # Check if a Sold instance already exists for this WorkerProductOrder, STIR, and company
                         sold_instance = Sold.objects.filter(
                             worker_product_order=worker_product_order,
                             STIR=STIR,
@@ -1262,11 +1261,9 @@ class SoldView(APIView):
                         ).first()
 
                         if sold_instance:
-                            # If a Sold instance already exists, update the quantity
                             sold_instance.qty += qty
                             sold_instance.save()
                         else:
-                            # Create a new Sold instance
                             sold_instance = Sold(
                                 worker_product_order=worker_product_order,
                                 qty=qty,
@@ -1277,14 +1274,11 @@ class SoldView(APIView):
                             )
                             sold_instance.save()
 
-                            # Create new CompanyName if not exists
                             sold_instance.create_company_name()
 
-                        # Update WorkerProductOrder quantity
-                        worker_product_order.product_qty -= qty
-                        worker_product_order.save()
+                    worker_product_order.product_qty -= qty
+                    worker_product_order.save()
 
-                    # Fetch updated sold records
                     solds = Sold.objects.filter(worker_product_order=worker_product_order)
 
                     custom_response = [
@@ -1449,13 +1443,13 @@ class CompanyBalanceDetailView(APIView):
         company = get_object_or_404(CompanyBalance, id=id)
         serializer = CompanyBalanceGetSerializer(company, partial=True)
         return Response(data=serializer.data, status=status.HTTP_200_OK)
-    
+
     def delete(self, request, id):
         try:
             company = get_object_or_404(CompanyBalance, id=id)
         except:
             return Response(data='Company balance not found')
-        
+
         company.delete()
         return Response(data={'Successfully deleted'})
 
