@@ -1247,12 +1247,11 @@ class SoldView(APIView):
             STIR = serializer.validated_data.get('STIR', '')
             company_name = serializer.validated_data.get('company_name', '')
             worker_product_order_id = serializer.validated_data['worker_product_order'].id
-
+            print(worker_product_order_id)
             if worker_product_order_id is not None:
                 try:
                     with transaction.atomic():
-                        worker_product_order = WorkerProductOrder.objects.select_for_update().get(
-                            id=worker_product_order_id)
+                        worker_product_order = WorkerProductOrder.objects.get(id=worker_product_order_id)
 
                         sold_instance = Sold.objects.filter(
                             worker_product_order=worker_product_order,
