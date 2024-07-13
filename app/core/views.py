@@ -1200,12 +1200,11 @@ class SoldView(APIView):
                 stir = stir_info['STIR']
                 company_name = stir_info['company_name']
                 total_qty = stir_info['total_qty']
-                id = stir_info['id']
 
                 solds = Sold.objects.filter(STIR=stir, company_name=company_name)
 
                 sold_items = {
-                    'id': id,
+                    'id': stirs.id,
                     'STIR': stir,
                     'company_name': company_name,
                     'total_qty': total_qty,
