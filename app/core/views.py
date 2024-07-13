@@ -1202,9 +1202,10 @@ class SoldView(APIView):
                 total_qty = stir_info['total_qty']
 
                 solds = Sold.objects.filter(STIR=stir, company_name=company_name)
+                representative_id = solds.first().id if solds.exists() else None
 
                 sold_items = {
-                    'id': stirs.id,
+                    'id': representative_id,
                     'STIR': stir,
                     'company_name': company_name,
                     'total_qty': total_qty,
