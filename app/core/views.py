@@ -1226,8 +1226,8 @@ class SoldView(APIView):
                             'qty': sold.worker_product_order.qty,
                             'finish_product': [
                                 {
-                                    'id': sold.worker_product_order.finish_product.id,
-                                    'work_proses': sold.worker_product_order.finish_product.work_proses
+                                    'id': sold.worker_product_order.finish_product.id if sold.worker_product_order.finish_product.id else None,
+                                    'work_proses': sold.worker_product_order.finish_product.work_proses if sold.worker_product_order.finish_product.work_proses else None
                                 }
                             ]
                         }
