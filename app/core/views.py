@@ -1213,24 +1213,27 @@ class SoldView(APIView):
                 }
 
                 for sold in solds:
+                    worker_product_order = sold.worker_product_order
+                    worker_product_order_info = {
+                        'id': worker_product_order.id,
+                        'name': worker_product_order.name,
+                        'product_qty': worker_product_order.product_qty,
+                        'product_name': worker_product_order.product_name,
+                        'qty': worker_product_order.qty,
+                        'finish_product': [
+                            {
+                                'id': worker_product_order.finish_product.id if worker_product_order and worker_product_order.finish_product else None,
+                                'work_proses': worker_product_order.finish_product.work_proses if worker_product_order and worker_product_order.finish_product else None
+                            }
+                        ]
+                    } if worker_product_order else None
+
                     sold_item = {
                         'id': sold.id,
                         'qty': sold.qty,
                         'price': sold.price,
                         'ndc': sold.ndc,
-                        'worker_product_order': {
-                            'id': sold.worker_product_order.id,
-                            'name': sold.worker_product_order.name,
-                            'product_qty': sold.worker_product_order.product_qty,
-                            'product_name': sold.worker_product_order.product_name,
-                            'qty': sold.worker_product_order.qty,
-                            'finish_product': [
-                                {
-                                    'id': sold.worker_product_order.finish_product.id if sold.worker_product_order.finish_product else None,
-                                    'work_proses': sold.worker_product_order.finish_product.work_proses if sold.worker_product_order.finish_product else None
-                                }
-                            ]
-                        }
+                        'worker_product_order': worker_product_order_info
                     }
                     sold_items['sold_products'].append(sold_item)
 
