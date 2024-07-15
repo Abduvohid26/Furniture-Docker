@@ -1346,12 +1346,47 @@ class SoldDetailView(APIView):
 
     def delete(self, request, id):
         try:
-            sold = Sold.objects.get(id=id)
-        except Sold.DoesNotExist:
-            return Response(data={'Sold not found'}, status=status.HTTP_400_BAD_REQUEST)
+            with transaction.atomic():
+                sold = Sold.objects.get(id=id)
+                worker_product_order = sold.worker_product_order
 
-        sold.delete()
-        return Response(data={'Sold successfully deleted'}, status=status.HTTP_200_OK)
+                if worker_product_order:
+                    worker_product_order.product_qty += sold.qty
+                    worker_product_order.save()
+
+                custom_response = {
+                    'id': sold.id,
+                    'qty': sold.qty,
+                    'price': sold.price,
+                    'ndc': sold.ndc,
+                    'STIR': sold.STIR,
+                    'company_name': sold.company_name,
+                    'worker_product_order': {
+                        'id': worker_product_order.id,
+                        'name': worker_product_order.name,
+                        'product_qty': worker_product_order.product_qty,
+                        'product_name': worker_product_order.product_name,
+                        'qty': worker_product_order.qty,
+                        'finish_product': [
+                            {
+                                'id': worker_product_order.finish_product.id,
+                                'work_proses': worker_product_order.finish_product.work_proses
+                            }
+                        ]
+                    } if worker_product_order else None
+                }
+
+                sold.delete()
+
+            return Response({
+                'message': 'Sold successfully deleted',
+                **custom_response
+            }, status=status.HTTP_200_OK)
+
+        except Sold.DoesNotExist:
+            return Response(data={'Sold not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def patch(self, request, id):
         try:

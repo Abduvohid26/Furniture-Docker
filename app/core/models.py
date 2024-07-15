@@ -349,7 +349,7 @@ class Sold(BaseModel):
         try:
             company = CompanyName.objects.get(STIR=self.STIR, company_name=self.company_name)
         except CompanyName.DoesNotExist:
-            balance = self.qty * self.price  # Calculate balance as needed
+            balance = self.qty * self.price
             CompanyName.objects.create(
                 sold=self,
                 STIR=self.STIR,
@@ -357,7 +357,7 @@ class Sold(BaseModel):
                 balance=balance
             )
         else:
-            company.balance += self.qty * self.price  # Update balance if company exists
+            company.balance += self.qty * self.price
             company.save()
 
     def save(self, *args, **kwargs):
@@ -369,7 +369,7 @@ class CompanyName(BaseModel):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
     STIR = models.CharField(max_length=14)
     company_name = models.CharField(max_length=1000)
-    sold = models.ForeignKey(Sold, on_delete=models.CASCADE, null=True, blank=True, related_name='company')
+    sold = models.ForeignKey(Sold, on_delete=models.SET_NULL, null=True, blank=True, related_name='company')
     product = models.ForeignKey(Enter, on_delete=models.CASCADE, null=True, blank=True, related_name='company_names')
     balance = models.IntegerField()
 
