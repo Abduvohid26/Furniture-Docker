@@ -322,7 +322,7 @@ class CompanyProduct(BaseModel):
 
 
 class Sold(BaseModel):
-    worker_product_order = models.ForeignKey('core.WorkerProductOrder', on_delete=models.CASCADE, null=True, blank=True)
+    worker_product_order = models.ForeignKey('core.WorkerProductOrder', on_delete=models.SET_NULL, null=True, blank=True)
     qty = models.PositiveIntegerField()
     price = models.PositiveIntegerField()
     ndc = models.PositiveIntegerField(default=12)
