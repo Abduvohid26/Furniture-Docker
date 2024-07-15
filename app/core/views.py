@@ -1155,11 +1155,24 @@ class SoldGetView(APIView):
                 solds = Sold.objects.filter(STIR=stir, company_name=company_name)
 
                 for sold in solds:
+                    worker_product_order = sold.worker_product_order
+
                     finish_product = None
-                    if sold.worker_product_order.finish_product:
+                    if worker_product_order and worker_product_order.finish_product:
                         finish_product = {
-                            'id': sold.worker_product_order.finish_product.id,
-                            'work_proses': sold.worker_product_order.finish_product.work_proses
+                            'id': worker_product_order.finish_product.id,
+                            'work_proses': worker_product_order.finish_product.work_proses
+                        }
+
+                    worker_product_order_info = None
+                    if worker_product_order:
+                        worker_product_order_info = {
+                            'id': worker_product_order.id,
+                            'name': worker_product_order.name,
+                            'product_qty': worker_product_order.product_qty,
+                            'product_name': worker_product_order.product_name,
+                            'qty': worker_product_order.qty,
+                            'finish_product': finish_product
                         }
 
                     sold_item = {
@@ -1171,14 +1184,7 @@ class SoldGetView(APIView):
                             'qty': sold.qty,
                             'price': sold.price,
                             'ndc': sold.ndc,
-                            'worker_product_order': {
-                                'id': sold.worker_product_order.id,
-                                'name': sold.worker_product_order.name,
-                                'product_qty': sold.worker_product_order.product_qty,
-                                'product_name': sold.worker_product_order.product_name,
-                                'qty': sold.worker_product_order.qty,
-                                'finish_product': finish_product
-                            }
+                            'worker_product_order': worker_product_order_info
                         }]
                     }
                     custom_response.append(sold_item)
