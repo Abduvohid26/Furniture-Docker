@@ -351,7 +351,6 @@ class Sold(BaseModel):
             company = CompanyName.objects.get(STIR=self.STIR, company_name=self.company_name)
         except CompanyName.DoesNotExist:
             balance = -self.ndc_price if self.payment_price == 0 else self.payment_price - self.ndc_price
-            balance = self.qty * self.price
             print('create')
             CompanyName.objects.create(
                 sold=self,
