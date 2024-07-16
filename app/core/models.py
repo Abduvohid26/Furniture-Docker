@@ -82,6 +82,7 @@ class Enter(BaseModel):
         try:
             company = CompanyName.objects.get(STIR=self.STIR)
         except CompanyName.DoesNotExist:
+
             balance = -self.ndc_price if self.payment_price == 0 else self.payment_price - self.ndc_price
             CompanyName.objects.create(product_id=self.id, STIR=self.STIR, company_name=self.company_name,
                                        balance=balance)
@@ -346,22 +347,18 @@ class Sold(BaseModel):
         return str(self.company_name)
 
     def create_company_name(self):
-        print('salom')
         try:
-            company = CompanyName.objects.get(STIR=self.STIR, company_name=self.company_name)
+            company = CompanyName.objects.get(STIR=self.STIR)
         except CompanyName.DoesNotExist:
             balance = -self.ndc_price if self.payment_price == 0 else self.payment_price - self.ndc_price
-            print('create')
-            CompanyName.objects.create(
-                sold=self,
-                STIR=self.STIR,
-                company_name=self.company_name,
-                balance=balance
-            )
-
+            company = CompanyName.objects.create(sold_id=self.id, STIR=self.STIR, company_name=self.company_name,
+                                                 balance=balance)
         else:
-            company.balance += self.ndc_price
+            total = self.payment_price - self.ndc_price
+            company.balance += total
             company.save()
+
+        return company
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
