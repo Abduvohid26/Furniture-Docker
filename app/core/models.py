@@ -346,17 +346,23 @@ class Sold(BaseModel):
         return str(self.company_name)
 
     def create_company_name(self):
+        print('salom')
         try:
             company = CompanyName.objects.get(STIR=self.STIR, company_name=self.company_name)
+            print(company)
         except CompanyName.DoesNotExist:
+            print('alikl')
             balance = self.qty * self.price
+            print('create')
             CompanyName.objects.create(
                 sold=self,
                 STIR=self.STIR,
                 company_name=self.company_name,
                 balance=balance
             )
+
         else:
+            print('else')
             company.balance += self.qty * self.price
             company.save()
 
