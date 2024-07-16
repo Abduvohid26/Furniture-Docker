@@ -1358,9 +1358,9 @@ class SoldDetailView(APIView):
             with transaction.atomic():
                 sold = Sold.objects.get(id=id)
                 worker_product_order = sold.worker_product_order
-
+                print('salom')
                 if worker_product_order:
-                    worker_product_order.finish_product.work_proses += sold.qty
+                    worker_product_order.product_qty += sold.qty
                     worker_product_order.save()
 
                 custom_response = {
