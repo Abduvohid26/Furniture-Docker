@@ -205,4 +205,5 @@ AUTH_USER_MODEL = 'users.User'
 
 LOGIN_URL = "/login"
 LOGIN_REDIRECT_URL = '/'
-CSRF_TRUSTED_ORIGINS = ['http://127.0.0.1:2004', 'http://192.241.134.10:8000']
+
+CSRF_TRUSTED_ORIGINS = ['https://crm.abduvohid2629.uz', 'https://www.crm.abduvohid2629.uz']
