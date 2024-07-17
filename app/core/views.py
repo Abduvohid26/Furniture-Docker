@@ -1290,7 +1290,7 @@ class SoldView(APIView):
                     print('minus', worker_product_order.product_qty)
                     worker_product_order.save()
 
-                    solds = Sold.objects.filter(worker_product_order=worker_product_order, STIR=STIR, company_name=company_name).first()
+                    solds = Sold.objects.filter(worker_product_order=worker_product_order, STIR=STIR, company_name=company_name)
 
                     custom_response = [
                         {
