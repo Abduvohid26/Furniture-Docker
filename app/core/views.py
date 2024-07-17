@@ -1284,12 +1284,13 @@ class SoldView(APIView):
                             )
                             sold_instance.save()
 
-                            sold_instance.create_company_name()
+                            # sold_instance.create_company_name()
 
                     worker_product_order.product_qty -= qty
+                    print('minus', worker_product_order.product_qty)
                     worker_product_order.save()
 
-                    solds = Sold.objects.filter(worker_product_order=worker_product_order)
+                    solds = Sold.objects.filter(worker_product_order=worker_product_order, STIR=STIR, company_name=company_name).first()
 
                     custom_response = [
                         {
