@@ -1258,11 +1258,13 @@ class SoldView(APIView):
             STIR = serializer.validated_data.get('STIR', '')
             company_name = serializer.validated_data.get('company_name', '')
             worker_product_order_id = serializer.validated_data['worker_product_order'].id
-            print(worker_product_order_id)
+            print(f'Worker Product Order ID: {worker_product_order_id}')
+
             if worker_product_order_id is not None:
                 try:
                     with transaction.atomic():
-                        worker_product_order = WorkerProductOrder.objects.get(id=worker_product_order_id)
+                        worker_product_order = WorkerProductOrder.objects.select_for_update().get(
+                            id=worker_product_order_id)
 
                         sold_instance = Sold.objects.filter(
                             worker_product_order=worker_product_order,
@@ -1284,13 +1286,13 @@ class SoldView(APIView):
                             )
                             sold_instance.save()
 
-                            # sold_instance.create_company_name()
+                        # Product quantity update
+                        worker_product_order.product_qty -= qty
+                        print(f'Updated Product Quantity: {worker_product_order.product_qty}')
+                        worker_product_order.save()
 
-                    worker_product_order.product_qty -= qty
-                    print('minus', worker_product_order.product_qty)
-                    worker_product_order.save()
-
-                    solds = Sold.objects.filter(worker_product_order=worker_product_order, STIR=STIR, company_name=company_name)
+                    solds = Sold.objects.filter(worker_product_order=worker_product_order, STIR=STIR,
+                                                company_name=company_name)
 
                     custom_response = [
                         {
@@ -1316,7 +1318,6 @@ class SoldView(APIView):
                     return Response({'error': 'Worker product order not found'}, status=status.HTTP_404_NOT_FOUND)
                 except Exception as e:
                     return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
             else:
                 return Response({'error': 'Worker product order ID is required'}, status=status.HTTP_400_BAD_REQUEST)
 
