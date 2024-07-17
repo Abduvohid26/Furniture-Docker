@@ -1286,13 +1286,20 @@ class SoldView(APIView):
                             )
                             sold_instance.save()
 
-                        # Product quantity update
-                        worker_product_order.product_qty -= qty
-                        print(f'Updated Product Quantity: {worker_product_order.product_qty}')
-                        worker_product_order.save()
+                        related_orders = WorkerProductOrder.objects.filter(
+                            name=worker_product_order.name,
+                        )
+                        print('rel', related_orders)
+                        for product_order in related_orders:
+                            product_order.product_qty -= qty
+                            product_order.save()
 
-                    solds = Sold.objects.filter(worker_product_order=worker_product_order, STIR=STIR,
-                                                company_name=company_name)
+                    solds = Sold.objects.filter(
+                        worker_product_order__name=worker_product_order.name,
+                        worker_product_order__product_name=worker_product_order.product_name,
+                        STIR=STIR,
+                        company_name=company_name
+                    )
 
                     custom_response = [
                         {
@@ -1358,12 +1365,15 @@ class SoldDetailView(APIView):
     def delete(self, request, id):
         try:
             with transaction.atomic():
-                sold = Sold.objects.get(id=id)
+                sold = get_object_or_404(Sold, id=id)
                 worker_product_order = sold.worker_product_order
-                print('salom')
+
                 if worker_product_order:
-                    worker_product_order.product_qty += sold.qty
-                    worker_product_order.save()
+                    related_orders = WorkerProductOrder.objects.filter(name=worker_product_order.name)
+
+                    for product_order in related_orders:
+                        product_order.product_qty += sold.qty
+                        product_order.save()
 
                 custom_response = {
                     'id': sold.id,
@@ -1395,7 +1405,7 @@ class SoldDetailView(APIView):
             }, status=status.HTTP_200_OK)
 
         except Sold.DoesNotExist:
-            return Response(data={'Sold not found'}, status=status.HTTP_404_NOT_FOUND)
+            return Response(data={'error': 'Sold not found'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -1792,15 +1802,14 @@ class WorkerProductOrderDetailView(APIView):
     def delete(self, request, id):
         try:
             order = get_object_or_404(WorkerProductOrder, id=id)
-            related_orders = WorkerProductOrder.objects.filter(name=order.name, product_qty=order.product_qty)
+            related_orders = WorkerProductOrder.objects.filter(name=order.name)
 
-            with transaction.atomic():
-                for product_order in related_orders:
-                    finish_product = product_order.finish_product
-                    finish_product.work_proses += product_order.qty
-                    finish_product.save()
+            for product_order in related_orders:
+                finish_product = product_order.finish_product
+                finish_product.work_proses += product_order.qty
+                finish_product.save()
 
-                related_orders.delete()
+            related_orders.delete()
 
             return Response(data={'Worker Product Order successfully deleted'}, status=status.HTTP_204_NO_CONTENT)
 
