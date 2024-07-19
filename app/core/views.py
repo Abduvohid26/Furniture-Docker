@@ -1697,7 +1697,7 @@ class OrderAssignmentViewSet(viewsets.ModelViewSet):
 
 class WorkerProductOrderView(APIView):
     def get(self, request):
-        worker_product_orders = WorkerProductOrder.objects.all()
+        worker_product_orders = WorkerProductOrder.objects.filter(product_qty__gt=0)
         orders_dict = {}
 
         for order in worker_product_orders:
