@@ -1483,7 +1483,7 @@ class CompanyBalanceView(APIView):
             company_id = serializer.validated_data['company'].id
             price = serializer.validated_data['price']
             company_balance_model = CompanyName.objects.get(id=company_id)
-            company_balance_model.balance -= price
+            company_balance_model.balance += price
             company_balance_model.save()
             serializer.save()
             return Response(data=serializer.data, status=status.HTTP_201_CREATED)
