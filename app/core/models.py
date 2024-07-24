@@ -418,7 +418,6 @@ class OrderAssignment(models.Model):
     def __str__(self):
         return f"{self.order.name} - {self.user.username} - Qty: {self.qty}"
 
-# BaseModel add kerak rm bolganda
 
 
 class WorkerProductOrder(models.Model):
@@ -427,6 +426,8 @@ class WorkerProductOrder(models.Model):
     finish_product = models.ForeignKey(FinishedProduct, on_delete=models.CASCADE)
     qty = models.IntegerField()
     product_name = models.CharField(max_length=255)
+    created_at = models.DateField(auto_now=True)
+    updated_at = models.DateField(auto_now=True)
 
     def __str__(self):
         return f'{self.name}'

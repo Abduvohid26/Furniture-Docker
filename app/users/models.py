@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from django.utils import timezone
 from django.apps import apps
 # from core.models import Order
-ADMIN, MANAGER, WORKER, CHIEF, GUARD = ('admin', 'manager', 'worker', 'chief', 'guard')
+ADMIN, MANAGER, WORKER, CHIEF, GUARD, OKLAD = ('admin', 'manager', 'worker', 'chief', 'guard', 'oklad')
 
 
 class User(AbstractUser, BaseModel):
@@ -16,7 +16,8 @@ class User(AbstractUser, BaseModel):
         (MANAGER, MANAGER),
         (WORKER, WORKER),
         (CHIEF, CHIEF),
-        (GUARD, GUARD)
+        (GUARD, GUARD),
+        (OKLAD, OKLAD)
     )
     user_roles = models.CharField(max_length=100, choices=USER_ROLES, default=WORKER)
     phone_number = models.CharField(max_length=13, validators=[phone_regex])
@@ -31,7 +32,6 @@ class User(AbstractUser, BaseModel):
     def token(self):
         refresh = RefreshToken.for_user(self)
         access_token = refresh.access_token
-        # Add custom claims to the access token
         access_token['user_roles'] = self.user_roles
         access_token['first_name'] = self.first_name
         access_token['username'] = self.username
