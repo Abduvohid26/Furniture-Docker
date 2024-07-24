@@ -1707,6 +1707,7 @@ class WorkerProductOrderView(APIView):
                     'id': order.id,
                     'name': order.name,
                     'product_qty': order.product_qty,
+                    'create_at': order.created_at,
                     'products': []
                 }
 
