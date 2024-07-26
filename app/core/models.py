@@ -52,15 +52,17 @@ class Enter(BaseModel):
 
     @property
     def ndc_price(self):
-        if self.total_price:
+        if self.total_price is not None:
             ndc_rate = self.total_price * self.ndc // 100
             return self.total_price + ndc_rate
+        return 0
 
     @property
     def dollor_course_total(self):
-        if self.dollor_course:
+        if self.dollor_course and self.ndc_price is not None:
             dollor_course_t = self.ndc_price // self.dollor_course
             return dollor_course_t
+        return 0
 
     def __str__(self):
         return f"{self.name} qty-> {self.qty}"
