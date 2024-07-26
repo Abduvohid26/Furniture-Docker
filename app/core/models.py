@@ -10,9 +10,6 @@ from users.models import User
 from django.db import transaction
 CONFIRMED, NO_CONFIRMED, REJECT = ('CONFIRMED', 'NO_CONFIRMED', 'REJECT')
 
-# from django.contrib.auth import get_user_model
-# User = get_user_model()
-
 
 class Enter(BaseModel):
     Measurement = (
@@ -68,15 +65,7 @@ class Enter(BaseModel):
     def __str__(self):
         return f"{self.name} qty-> {self.qty}"
 
-    # def create_company_name(self):
-    #     company = CompanyName.objects.get(STIR=self.STIR)
-    #     if company is not None:
-    #         company.balance += self.payment_price - self.total_price
-    #         company.save()
-    #     else:
-    #         balance = -self.total_price if self.payment_price == 0 else self.payment_price - self.total_price
-    #         CompanyName.objects.create(product_id=self.id, STIR=self.STIR,
-    #                                    company_name=self.company_name, balance=balance)
+
 
     def create_company_name(self):
         try:
@@ -255,7 +244,6 @@ def process_worker_product_changes(sender, instance, created, **kwargs):
         else:
             WorkerExpense.objects.create(worker=worker, price=total_price)
 
-    # Check if Expense exists for the worker
     expense, created_exp = Expense.objects.get_or_create(
         worker=worker,
         status='MATERIAL_COST',
@@ -295,21 +283,6 @@ def update_expense_on_worker_expense_change(sender, instance, created, **kwargs)
             expense.save()
 
 
-# @receiver(post_save, sender=WorkerExpense)
-# def update_expense_on_worker_expense_change(sender, instance, created, **kwargs):
-#     total_expense_price = WorkerExpense.objects.filter(worker=instance.worker).aggregate(total=Sum('price'))['total']
-#     # Yangi Expense yaratmasdan, eski Expense yangilanadi
-#     expense = Expense.objects.filter(worker=instance.worker, status='MATERIAL_COST').first()
-#     if expense:
-#         expense.price = total_expense_price
-#         expense.save()
-#     else:
-#         Expense.objects.create(
-#             worker=instance.worker,
-#             status='MATERIAL_COST',
-#             price=total_expense_price,
-#             description='Buyurtma bajarish uchun olindi'
-#         )
 
 
 class CompanyProduct(BaseModel):
@@ -417,7 +390,6 @@ class OrderAssignment(models.Model):
 
     def __str__(self):
         return f"{self.order.name} - {self.user.username} - Qty: {self.qty}"
-
 
 
 class WorkerProductOrder(models.Model):
