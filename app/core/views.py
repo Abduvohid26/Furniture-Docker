@@ -1209,12 +1209,14 @@ class SoldView(APIView):
 
                 solds = Sold.objects.filter(STIR=stir, company_name=company_name)
                 representative_id = solds.first().id if solds.exists() else None
+                created_at = solds.first().created_at if solds.exists() else None
 
                 sold_items = {
                     'id': representative_id,
                     'STIR': stir,
                     'company_name': company_name,
                     'total_qty': total_qty,
+                    'created_at': created_at,
                     'sold_products': []
                 }
 
@@ -1258,6 +1260,7 @@ class SoldView(APIView):
             STIR = serializer.validated_data.get('STIR', '')
             company_name = serializer.validated_data.get('company_name', '')
             worker_product_order_id = serializer.validated_data['worker_product_order'].id
+            created_at = serializer.validated_data.get('created_at')
             print(f'Worker Product Order ID: {worker_product_order_id}')
 
             if worker_product_order_id is not None:
@@ -1282,7 +1285,8 @@ class SoldView(APIView):
                                 price=price,
                                 ndc=serializer.validated_data.get('ndc', 12),
                                 STIR=STIR,
-                                company_name=company_name
+                                company_name=company_name,
+                                created_at=created_at,
                             )
                             sold_instance.save()
 
