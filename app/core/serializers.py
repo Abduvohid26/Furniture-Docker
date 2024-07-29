@@ -32,12 +32,6 @@ class OrderSerializer(serializers.ModelSerializer):
         extra_kwargs = {'worker_data': {'required': False},
                         'image': {'required': False}}
 
-    # def create(self, validated_data):
-    #     product_data = validated_data.pop('name')  # Extract product data
-    #     company_product = CompanyProduct.objects.create(**product_data)
-    #     validated_data['name'] = company_product  # Update with created object
-    #     return Order.objects.create(**validated_data)
-
 
 class WorkerProductSerializer(serializers.ModelSerializer):
     id = serializers.UUIDField(read_only=True)
@@ -102,10 +96,6 @@ class ExpenseGetSerializer(serializers.ModelSerializer):
         fields = ['id', 'user', 'worker', 'price', 'status',  'description', 'created_at']
 
 
-# class CompanyProductSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = CompanyProduct
-#         fields = ['id', 'name', 'price', 'image', 'created_at']
 
 
 class WorkerProductGetSerializer(serializers.ModelSerializer):
@@ -151,7 +141,6 @@ class SoldSerializer(serializers.ModelSerializer):
 
 
 class SoldGetSerializer(serializers.ModelSerializer):
-    # worker_product_order = FinishedProductGetSerializer()
     class Meta:
         model = Sold
         fields = ['id', 'qty', 'price', 'ndc', 'STIR', 'company_name',

@@ -40,12 +40,6 @@ class RegisterSerializer(serializers.ModelSerializer):
     
         return data
 
-    # def to_representation(self, instance):
-    #     data = super(RegisterSerializer, self).to_representation(instance)
-    #     tokens = instance.token()
-    #     data.update(tokens)
-    #     return data
-
 
 class LoginSerializer(serializers.ModelSerializer):
     id = serializers.UUIDField(read_only=True)

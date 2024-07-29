@@ -11,7 +11,7 @@ def validate_image(value):
     if not ext.lower() in valid_extensions:
         raise ValidationError('Faqat JPG, JPEG, PNG, SVG  formatidagi rasmlarni yuklang.')
 
-    max_size = 10 * 1024 * 1024  # 4 MB
+    max_size = 10 * 1024 * 1024
     if value.size > max_size:
         raise ValidationError('Rasm hajmi 4 MB dan katta bo\'lishi mumkin emas.')
 

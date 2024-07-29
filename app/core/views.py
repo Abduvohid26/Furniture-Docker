@@ -12,20 +12,22 @@ from .serializers import ProductSerializer, OrderSerializer, WorkerProductSerial
     CompanyNameProductSerializer, CompanyNameSoldSerializer, WorkerProductSendAdminSerializer, \
     WorkerProductSendGetAdminSerializer, TestOrderSerializer, OrderAssignmentSerializer, WorkerProductOrderSerializer, \
     WorkerProductOrderDetailSerializer, WorkerProductOrderDetailSerializer
-
 from core.models import Enter, Order, WorkerProduct, Message, WorkerWork, Expense, CompanyProduct, \
     CompanyName, Sold, FinishedProduct, CompanyBalance, WorkerExpense, WorkerProductSendAdmin, NO_CONFIRMED, REJECT, \
     TestOrder, OrderAssignment, WorkerProductOrder
 from users.utils import CustomPagination
 from datetime import datetime
 from django.db import transaction
-
 import uuid
 from users.models import User
 from users.serializers import WorkStaticGetSerializer
 from rest_framework import viewsets
-# from django.contrib.auth import get_user_model
-# User = get_user_model()
+from django.db.models import Count
+from rest_framework.response import Response
+from datetime import datetime, timedelta
+from django.db.models import Sum
+from django.utils import timezone
+
 
 
 class Product(APIView):
@@ -76,63 +78,6 @@ class ProductDetail(APIView):
             return Response(data={'message': 'Product successfully deleted'})
 
 
-# class OrderAPIView(APIView):
-#     permission_classes = [permissions.AllowAny]
-#     # pagination_class = CustomPagination
-#     # def get(self, request):
-#     #     order = Order.objects.all()
-#     #     paginator = self.pagination_class()
-#     #     page = paginator.paginate_queryset(queryset=order, request=request)
-#     #     serializer = OrderSerializer(page, many=True)
-#     #     response = paginator.get_paginated_response(data=serializer.data)
-#     #     return Response(data=response.data, status=status.HTTP_200_OK)
-#     def get(self, request, *args, **kwargs):
-#         order = Order.objects.all()
-#         serializer = OrderSerializer(order, many=True)
-#         return Response(data=serializer.data, status=status.HTTP_200_OK)
-
-#     def post(self, request):
-#         serializer = OrderSerializer(data=request.data)
-#         if serializer.is_valid():
-#             serializer.save()
-#             return Response(data=serializer.data, status=status.HTTP_200_OK)
-#         return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-# class OrderDetailAPIView(APIView):
-#     def get(self, request, id):
-#         order = get_object_or_404(Order, id=id)
-#         serializer = OrderSerializer(order)
-#         return Response(data=serializer.data, status=status.HTTP_200_OK)
-
-#     def put(self, request, id):
-#         order = get_object_or_404(Order, id=id)
-#         serializer = OrderSerializer(instance=order, data=request.data)
-#         if serializer.is_valid():
-#             serializer.save()
-#             return Response(data=serializer.data, status=status.HTTP_200_OK)
-#         return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-#     def delete(self, request, id):
-#         try:
-#             order = get_object_or_404(Order, id=id)
-#         except:
-#             return Response(data={'error': 'Order Not Fount'})
-
-#         else:
-#             order.delete()
-#             return Response(data={'success': 'Order successfully deleted'})
-
-# class OrderAPIView(generics.ListCreateAPIView):
-#     permission_classes = [permissions.AllowAny]
-#     serializer_class = OrderSerializer
-#     queryset = Order.objects.all()
-#
-#
-# class OrderDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
-#     permission_classes = [permissions.AllowAny]
-#     serializer_class = OrderSerializer
-#     queryset = Order.objects.all()
 
 
 class OrderAPIView(APIView):
@@ -194,24 +139,20 @@ class WorkerProductAPIView(APIView):
             product = serializer.validated_data['product']
             worker = serializer.validated_data['worker']
             qty = serializer.validated_data['qty']
-            today = datetime.today().date()  # Current date
+            today = datetime.today().date() 
 
             try:
-                # Try to get WorkerProduct for the worker and product
                 worker_product = WorkerProduct.objects.filter(worker=worker, product=product).first()
 
                 if worker_product and worker_product.created_at == today:
-                    # If found and created today, update the quantity
                     worker_product.qty += qty
                     worker_product.save()
                 else:
-                    # If not found or not created today, create a new WorkerProduct
                     serializer.save()
 
             except Exception as e:
                 return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Deduct qty from Product model
             product.qty -= qty
             product.save()
 
@@ -349,32 +290,26 @@ class SendMessageView(APIView):
             order_id = serializer.validated_data.get('order').id
             sender_id = serializer.validated_data.get('sender').id
 
-            # Ishchini, buyurtmani va jo'natuvchini get_object_or_404 yordamida olish
             worker = get_object_or_404(User, id=worker_id)
             order = get_object_or_404(Order, id=order_id)
             sender = get_object_or_404(User, id=sender_id)
 
-            # Buyurtma boshqa xodimga tegishli ekanligini tekshirish
             if WorkerWork.objects.filter(order=order).exclude(worker=worker).exists():
                 return Response(
                     data={'success': False, 'message': 'Bu buyurtma allaqachon boshqa xodimga tegishli'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-            # Xodim allaqachon bu buyurtmaga tayinlanganligini tekshirish
             if WorkerWork.objects.filter(order=order, worker=worker).exists():
                 return Response(
                     data={'success': False, 'message': 'Bu buyurtma uchun xodim allaqachon mavjud'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-            # Xabar yaratish
             message = Message.objects.create(sender=sender, worker=worker, order=order, text=text)
 
-            # WorkerWork yaratish yoki mavjudligini tekshirish
             WorkerWork.objects.get_or_create(order=order, worker=worker)
 
-            # Buyurtma holatini 'pending' ga o'zgartirish
             order.status = 'ONE_PENDING'
             order.worker_data = f'{worker.first_name} {worker.last_name}'
             order.save()
@@ -388,48 +323,6 @@ class SendMessageView(APIView):
         return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-# class SendMessageView(APIView):
-#     def post(self, request):
-#         serializer = MessageSerializer(data=request.data)
-#         if serializer.is_valid():
-#             text = serializer.validated_data.get('text')
-#             worker = serializer.validated_data.get('worker')
-#             sender = serializer.validated_data.get('sender')
-#             order_data = request.data.get('order')
-#
-#             # Handle Order creation or fetching
-#             order = None
-#             if order_data:
-#                 order_id = order_data.get('id')
-#                 if order_id:
-#                     order = get_object_or_404(Order, id=order_id)
-#                 else:
-#                     # Create a new Order if order_id is not provided
-#                     order = Order.objects.create(
-#                         name=order_data.get('name'),
-#                         status=order_data.get('status'),
-#                         qty=order_data.get('qty'),
-#                         price=order_data.get('price'),
-#                         dollor_course=order_data.get('dollor_course'),
-#                         work_proses=order_data.get('work_proses'),
-#                         created_at=order_data.get('created_at'),
-#                         description=order_data.get('description'),
-#                         measurement=order_data.get('measurement'),
-#                         STIR=order_data.get('STIR'),
-#                         company_name=order_data.get('company_name'),
-#                         ndc=order_data.get('ndc'),
-#                         payment=order_data.get('payment')
-#                     )
-#
-#             # Create the Message instance
-#             message = Message.objects.create(sender=sender, worker=worker, order=order, text=text)
-#             return Response(
-#                 data={
-#                     'id': message.id,
-#                     'success': True,
-#                     'message': 'Message successfully sent'
-#                 }, status=status.HTTP_200_OK
-#             )
 
 
 class AllSendMessageView(APIView):
@@ -464,48 +357,6 @@ class AllSendMessageView(APIView):
         return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-from django.db.models import Count
-from rest_framework.response import Response
-from datetime import datetime, timedelta
-from django.db.models import Sum
-from django.db.models.functions import ExtractWeekDay, ExtractMonth, ExtractDay
-
-from django.utils import timezone
-
-# class OrderStatsAPIView(APIView):
-#     def get(self, request, period):
-#         today = timezone.now().date()
-#         start_date = end_date = None
-
-#         if period == 'daily':
-#             start_date = today
-#             end_date = today + timezone.timedelta(days=1)
-#         elif period == 'weekly':
-#             start_date = today - timezone.timedelta(days=today.weekday())
-#             end_date = start_date + timezone.timedelta(weeks=1)
-#         elif period == 'monthly':
-#             start_date = today.replace(day=1)
-#             end_date = (start_date + timezone.timedelta(days=32)).replace(day=1)
-#         elif period == 'yearly':
-#             start_date = today.replace(month=1, day=1)
-#             end_date = start_date.replace(year=start_date.year + 1)
-#         else:
-#             return Response({'error': 'Invalid period'}, status=400)
-
-#         orders = Order.objects.filter(created_at__gte=start_date, created_at__lt=end_date)
-
-#         # Statistikalar
-#         total_orders = orders.count()
-#         total_price = sum(order.total_price for order in orders)
-#         avg_price = total_price / total_orders if total_orders > 0 else 0
-
-#         return Response({
-#             'period': period,
-#             'total_orders': total_orders,
-#             'total_price': total_price,
-#             'avg_price': avg_price
-#         })
-
 
 WEEKDAY_NAMES = {
     0: 'Monday',
@@ -521,30 +372,20 @@ WEEKDAY_NAMES = {
 
 @api_view(['GET'])
 def weekly_order_stats(request):
-    # Bugungi sana
     today = timezone.now().date()
-    # Haftaning boshlang'ichidagi sana
     start_of_week = today - timedelta(days=today.weekday())
-    # Haftaning oxiridagi sana
     end_of_week = start_of_week + timedelta(days=6)
-
-    # Buyurtmalarni haftalik hisoblash
     weekly_stats = Order.objects.filter(created_at__range=[start_of_week, end_of_week]) \
                                  .values('created_at') \
                                  .annotate(total_qty=Count('id')) \
                                  .order_by('created_at')
-
-    # Haftalik statistikani list formatida qaytaramiz
     weekly_stats_list = {'days': [], 'quantities': []}
     for stat in weekly_stats:
         created_at = stat.get('created_at')
         if created_at:
-            # Haftaning nomi (Monday, Tuesday, Wednesday, etc.)
-            day_number = created_at.weekday()  # 0 - dushanba, 1 - seshanba, va hokazo
+            day_number = created_at.weekday()  
             day_name = WEEKDAY_NAMES[day_number]
-            # Buyurtma soni
             qty = stat['total_qty']
-            # Hafta nomi va buyurtmalar sonini listga qo'shamiz
             weekly_stats_list['days'].append(day_name)
             weekly_stats_list['quantities'].append(qty)
 
@@ -733,57 +574,6 @@ class FilterSoldSTIRDateAIView(APIView):
         return Response(data=serializer.errors, status=status.HTTP_200_OK)
 
 
-        #     for company_name in company_names:
-        #         sold_data = {}
-        #         if company_name.sold:
-        #             sold_data = {
-        #                 'id': company_name.sold.id,
-        #                 'qty': company_name.sold.qty,
-        #                 'price': company_name.sold.price,
-        #                 'ndc': company_name.sold.ndc,
-        #                 'total_price': company_name.sold.total_price,
-        #                 'ndc_price': company_name.sold.ndc_price,
-        #                 'finish_product': {}
-        #             }
-        #             if company_name.sold.finish_product:
-        #                 sold_data['finish_product'] = {
-        #                     'id': company_name.sold.finish_product.id,
-        #                     'work_proses': company_name.sold.finish_product.work_proses,
-        #                     'order': {}
-        #                 }
-        #                 if company_name.sold.finish_product.order:
-        #                     sold_data['finish_product']['order'] = {
-        #                         'id': company_name.sold.finish_product.order.id,
-        #                         'name': company_name.sold.finish_product.order.name,
-        #                         'status': company_name.sold.finish_product.order.status,
-        #                         'work_proses': company_name.sold.finish_product.order.work_proses,
-        #                         'qty': company_name.sold.finish_product.order.qty,
-        #                         'description': company_name.sold.finish_product.order.description,
-        #                         'measurement': company_name.sold.finish_product.order.measurement,
-        #                         'image': company_name.sold.finish_product.order.image,
-        #                     }
-        #         product_data = {}
-        #         if company_name.product:
-        #             product_data = {
-        #                 'id': company_name.product.id,
-        #                 'name': company_name.product.name,
-        #                 'qty': company_name.product.qty,
-        #                 'price': company_name.product.price,
-        #                 'ndc_price': company_name.product.ndc_price,
-        #                 'measurement': company_name.product.measurement,
-        #                 'category': company_name.product.category,
-        #                 'created_at': company_name.product.created_at
-        #             }
-        #         custom_response.append({
-        #             'id': company_name.id,
-        #             'STIR': company_name.STIR,
-        #             'company_name': company_name.company_name,
-        #             'balance': company_name.balance,
-        #             'sold': sold_data,
-        #             'product': product_data
-        #         })
-        #     return Response(data=custom_response, status=status.HTTP_200_OK)
-        # return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class FilterDateCostView(APIView):
@@ -1009,16 +799,7 @@ class CompanyNameGetView(APIView):
                         'product_qty': company_name.sold.worker_product_order.product_qty,
                         'finish_product': {}
                     }
-                    # if company_name.sold.finish_product.order:
-                    #     sold_data['finish_product']['order'] = {
-                    #         'id': company_name.sold.finish_product.order.id,
-                    #         'name': company_name.sold.finish_product.order.name,
-                    #         'status': company_name.sold.finish_product.order.status,
-                    #         'work_proses': company_name.sold.finish_product.order.work_proses,
-                    #         'qty': company_name.sold.finish_product.order.qty,
-                    #         'description': company_name.sold.finish_product.order.description,
-                    #         'measurement': company_name.sold.finish_product.order.measurement,
-                    #         'image': company_name.sold.finish_product.order.image,
+                  
 
             product_data = {}
             if company_name.product:
@@ -1783,8 +1564,6 @@ class WorkerProductOrderView(APIView):
 class WorkerProductOrderDetailView(APIView):
     def get(self, request, id):
         order = get_object_or_404(WorkerProductOrder, id=id)
-
-        # Constructing the response dictionary
         response_data = {
             'id': order.id,
             'name': order.name,

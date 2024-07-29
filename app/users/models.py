@@ -6,7 +6,6 @@ from .utils import phone_regex, validate_image
 from datetime import datetime, timedelta
 from django.utils import timezone
 from django.apps import apps
-# from core.models import Order
 ADMIN, MANAGER, WORKER, CHIEF, GUARD, OKLAD = ('admin', 'manager', 'worker', 'chief', 'guard', 'oklad')
 
 
