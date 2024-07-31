@@ -1,7 +1,10 @@
 from django.contrib import admin
 from .models import Enter, Order, WorkerProduct, Message, WorkerProductGet, WorkerWork, \
     CompanyName, Sold, CompanyProduct, FinishedProduct, Expense, CompanyBalance, WorkerExpense, WorkerProductSendAdmin, \
-    OrderAssignment, TestOrder, WorkerProductOrder
+    OrderAssignment, TestOrder, WorkerProductOrder, UserSalaryMonth
+# Register your models here.
+# from django.contrib.auth import get_user_model
+# User = get_user_model()
 from users.models import User
 
 
@@ -36,3 +39,4 @@ admin.site.register(WorkerProductSendAdmin)
 admin.site.register(OrderAssignment)
 admin.site.register(TestOrder)
 admin.site.register(WorkerProductOrder)
+admin.site.register(UserSalaryMonth)
