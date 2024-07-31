@@ -70,5 +70,5 @@ urlpatterns = [
     path('company-name-sold/<uuid:id>/', CompanyNameSoldDetailView.as_view()),
     path('worker-product-order/', WorkerProductOrderView.as_view()),
     path('worker-product-order/<int:id>/', WorkerProductOrderDetailView.as_view()),
-    path('user-salary/<uuid:id>/', UserSalaryMonthView.as_view())
+    path('user-salary/', UserSalaryMonthView.as_view()),
 ]
