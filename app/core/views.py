@@ -1603,7 +1603,8 @@ class UserSalaryMonthView(APIView):
                 'user': user_data.user.id,
                 'user_salary': user_data.user_salary,
                 'paid_sum': user_data.paid_sum,
-                'remain_sum': user_data.remain_sum
+                'remain_sum': user_data.remain_sum,
+                'created_at': user_data.created_at,
             }, status=status.HTTP_200_OK
         )
 
