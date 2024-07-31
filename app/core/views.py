@@ -1599,26 +1599,34 @@ class WorkerProductOrderDetailView(APIView):
 
 
 class UserSalaryMonthView(APIView):
-    def get(self, request, id):
-        user_data = get_object_or_404(UserSalaryMonth, id=id)
-        return Response(
-            data={
+    def get(self, request):
+        user_datas = UserSalaryMonth.objects.all()
+        if not user_datas.exists():
+            return Response(
+                data={
+                    'success': False,
+                    'Salary': "User salary not found"
+                }
+            )
+        custom_data = [
+            {
                 'id': user_data.id,
                 'user': user_data.user.id,
                 'user_salary': user_data.user_salary,
                 'paid_sum': user_data.paid_sum,
                 'remain_sum': user_data.remain_sum,
                 'created_at': user_data.created_at,
-            }, status=status.HTTP_200_OK
-        )
-
-    def post(self, request, id):
+            }
+            for user_data in user_datas
+        ]
+        return Response(data=custom_data, status=status.HTTP_200_OK)
+    
+    def post(self, request):
         serializer = UserSalaryMonthSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.validated_data.get('user').id
             user_salary = serializer.validated_data.get('user_salary')
             worker_expense = Expense.objects.filter(user=user)
-            print(worker_expense)
             payments = sum(worker_ex.price for worker_ex in worker_expense)
 
             user_data = UserSalaryMonth.objects.create(
@@ -1638,11 +1646,4 @@ class UserSalaryMonthView(APIView):
                 }, status=status.HTTP_201_CREATED
             )
         return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-
-
-
-
-
-
+    
