@@ -285,8 +285,6 @@ def update_expense_on_worker_expense_change(sender, instance, created, **kwargs)
             expense.save()
 
 
-
-
 class CompanyProduct(BaseModel):
     name = models.CharField(max_length=255)
     price = models.PositiveIntegerField()
@@ -405,3 +403,13 @@ class WorkerProductOrder(models.Model):
 
     def __str__(self):
         return f'{self.name}'
+
+
+class UserSalaryMonth(BaseModel):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='user')
+    paid_sum = models.IntegerField()
+    user_salary = models.IntegerField()
+    remain_sum = models.IntegerField()
+
+    def __str__(self):
+        return str(self.paid_sum)

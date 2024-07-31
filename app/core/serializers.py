@@ -1,7 +1,7 @@
 from users.models import User
 from .models import Enter, Order, WorkerProduct, Message, WorkerWork, Expense, CompanyProduct, \
     WorkerProductGet, CompanyName, Sold, FinishedProduct, CompanyBalance, WorkerExpense, WorkerProductSendAdmin, \
-    TestOrder, OrderAssignment, WorkerProductOrder
+    TestOrder, OrderAssignment, WorkerProductOrder, UserSalaryMonth
 from rest_framework import serializers
 from users.serializers import UserSerializer
 
@@ -297,3 +297,9 @@ class WorkerProductOrderDetailSerializer1(serializers.ModelSerializer):
     class Meta:
         model = WorkerProductOrder
         fields = ('id', 'name', 'product_qty', 'products')
+
+
+class UserSalaryMonthSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserSalaryMonth
+        fields = ['id', 'user', 'user_salary']

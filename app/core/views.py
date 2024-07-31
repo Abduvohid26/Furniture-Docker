@@ -11,10 +11,10 @@ from .serializers import ProductSerializer, OrderSerializer, WorkerProductSerial
     FinishedProductGetSerializer, CompanyBalanceSerializer, CompanyBalanceGetSerializer, WorkExpenseSerializer, \
     CompanyNameProductSerializer, CompanyNameSoldSerializer, WorkerProductSendAdminSerializer, \
     WorkerProductSendGetAdminSerializer, TestOrderSerializer, OrderAssignmentSerializer, WorkerProductOrderSerializer, \
-    WorkerProductOrderDetailSerializer, WorkerProductOrderDetailSerializer
+    WorkerProductOrderDetailSerializer, WorkerProductOrderDetailSerializer, UserSalaryMonthSerializer
 from core.models import Enter, Order, WorkerProduct, Message, WorkerWork, Expense, CompanyProduct, \
     CompanyName, Sold, FinishedProduct, CompanyBalance, WorkerExpense, WorkerProductSendAdmin, NO_CONFIRMED, REJECT, \
-    TestOrder, OrderAssignment, WorkerProductOrder
+    TestOrder, OrderAssignment, WorkerProductOrder, UserSalaryMonth
 from users.utils import CustomPagination
 from datetime import datetime
 from django.db import transaction
@@ -27,7 +27,6 @@ from rest_framework.response import Response
 from datetime import datetime, timedelta
 from django.db.models import Sum
 from django.utils import timezone
-
 
 
 class Product(APIView):
@@ -76,8 +75,6 @@ class ProductDetail(APIView):
         else:
             product.delete()
             return Response(data={'message': 'Product successfully deleted'})
-
-
 
 
 class OrderAPIView(APIView):
@@ -139,7 +136,7 @@ class WorkerProductAPIView(APIView):
             product = serializer.validated_data['product']
             worker = serializer.validated_data['worker']
             qty = serializer.validated_data['qty']
-            today = datetime.today().date() 
+            today = datetime.today().date()
 
             try:
                 worker_product = WorkerProduct.objects.filter(worker=worker, product=product).first()
@@ -248,7 +245,6 @@ class WorkerProductRejectView(APIView):
         return Response(data=serializer.data, status=status.HTTP_200_OK)
 
 
-
 class MessageSendAPIView(APIView):
     def get(self, request):
         order = Message.objects.all()
@@ -323,8 +319,6 @@ class SendMessageView(APIView):
         return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-
-
 class AllSendMessageView(APIView):
     def post(self, request):
         serializer = AllMessageSerializer(data=request.data)
@@ -357,7 +351,6 @@ class AllSendMessageView(APIView):
         return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-
 WEEKDAY_NAMES = {
     0: 'Monday',
     1: 'Tuesday',
@@ -369,21 +362,20 @@ WEEKDAY_NAMES = {
 }
 
 
-
 @api_view(['GET'])
 def weekly_order_stats(request):
     today = timezone.now().date()
     start_of_week = today - timedelta(days=today.weekday())
     end_of_week = start_of_week + timedelta(days=6)
     weekly_stats = Order.objects.filter(created_at__range=[start_of_week, end_of_week]) \
-                                 .values('created_at') \
-                                 .annotate(total_qty=Count('id')) \
-                                 .order_by('created_at')
+        .values('created_at') \
+        .annotate(total_qty=Count('id')) \
+        .order_by('created_at')
     weekly_stats_list = {'days': [], 'quantities': []}
     for stat in weekly_stats:
         created_at = stat.get('created_at')
         if created_at:
-            day_number = created_at.weekday()  
+            day_number = created_at.weekday()
             day_name = WEEKDAY_NAMES[day_number]
             qty = stat['total_qty']
             weekly_stats_list['days'].append(day_name)
@@ -572,8 +564,6 @@ class FilterSoldSTIRDateAIView(APIView):
                 ]
                 return Response(data=custom_data, status=status.HTTP_200_OK)
         return Response(data=serializer.errors, status=status.HTTP_200_OK)
-
-
 
 
 class FilterDateCostView(APIView):
@@ -799,7 +789,6 @@ class CompanyNameGetView(APIView):
                         'product_qty': company_name.sold.worker_product_order.product_qty,
                         'finish_product': {}
                     }
-                  
 
             product_data = {}
             if company_name.product:
@@ -1537,7 +1526,9 @@ class WorkerProductOrderView(APIView):
 
                         finish_product_model.save()
 
-                        existing_order = WorkerProductOrder.objects.filter(name=name, finish_product=finish_product_model, product_name=product_name).first()
+                        existing_order = WorkerProductOrder.objects.filter(name=name,
+                                                                           finish_product=finish_product_model,
+                                                                           product_name=product_name).first()
 
                         if existing_order:
                             existing_order.qty += qty
@@ -1601,3 +1592,52 @@ class WorkerProductOrderDetailView(APIView):
             return Response(data={'error': 'Worker Product Order not found'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response(data={'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class UserSalaryMonthView(APIView):
+    def get(self, request, id):
+        user_data = get_object_or_404(UserSalaryMonth, id=id)
+        return Response(
+            data={
+                'id': user_data.id,
+                'user': user_data.user.id,
+                'user_salary': user_data.user_salary,
+                'paid_sum': user_data.paid_sum,
+                'remain_sum': user_data.remain_sum
+            }, status=status.HTTP_200_OK
+        )
+
+    def post(self, request, id):
+        serializer = UserSalaryMonthSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.validated_data.get('user').id
+            user_salary = serializer.validated_data.get('user_salary')
+            worker_expense = Expense.objects.filter(user=user)
+            print(worker_expense)
+            payments = sum(worker_ex.price for worker_ex in worker_expense)
+
+            user_data = UserSalaryMonth.objects.create(
+                user_id=user,
+                paid_sum=payments,
+                user_salary=user_salary,
+                remain_sum=user_salary - payments
+            )
+
+            return Response(
+                data={
+                    'id': user_data.id,
+                    'user': user_data.user_id,
+                    'user_salary': user_data.user_salary,
+                    'paid_sum': user_data.paid_sum,
+                    'remain_sum': user_data.remain_sum
+                }, status=status.HTTP_201_CREATED
+            )
+        return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+
+
+
+
+
