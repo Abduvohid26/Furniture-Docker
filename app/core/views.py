@@ -1601,7 +1601,7 @@ class WorkerProductOrderDetailView(APIView):
 class UserSalaryMonthView(APIView):
     def get(self, request):
         user_datas = UserSalaryMonth.objects.all()
-        if not user_datas.exists():
+        if not user_datas:
             return Response(
                 data={
                     'success': False,
@@ -1620,7 +1620,7 @@ class UserSalaryMonthView(APIView):
             for user_data in user_datas
         ]
         return Response(data=custom_data, status=status.HTTP_200_OK)
-    
+
     def post(self, request):
         serializer = UserSalaryMonthSerializer(data=request.data)
         if serializer.is_valid():
@@ -1646,4 +1646,3 @@ class UserSalaryMonthView(APIView):
                 }, status=status.HTTP_201_CREATED
             )
         return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
