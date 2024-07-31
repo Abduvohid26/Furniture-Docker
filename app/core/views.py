@@ -1601,13 +1601,13 @@ class WorkerProductOrderDetailView(APIView):
 class UserSalaryMonthView(APIView):
     def get(self, request):
         user_datas = UserSalaryMonth.objects.all()
-        if not user_datas:
-            return Response(
-                data={
-                    'success': False,
-                    'Salary': "User salary not found"
-                }
-            )
+        # if not user_datas:
+        #     return Response(
+        #         data={
+        #             'success': False,
+        #             'Salary': "User salary not found"
+        #         }
+        #     )
         custom_data = [
             {
                 'id': user_data.id,
