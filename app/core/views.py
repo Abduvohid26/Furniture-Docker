@@ -1601,7 +1601,6 @@ class WorkerProductOrderDetailView(APIView):
 class UserSalaryMonthView(APIView):
     def get(self, request):
         user_datas = UserSalaryMonth.objects.all()
-
         custom_data = [
             {
                 'id': user_data.id,
@@ -1622,9 +1621,8 @@ class UserSalaryMonthView(APIView):
         if serializer.is_valid():
             user = serializer.validated_data.get('user').id
             user_salary = serializer.validated_data.get('user_salary')
-            worker_expense = Expense.objects.filter(user=user)
+            worker_expense = Expense.objects.filter(worker=user)
             payments = sum(worker_ex.price for worker_ex in worker_expense)
-
             user_data = UserSalaryMonth.objects.create(
                 user_id=user,
                 paid_sum=payments,
