@@ -12,7 +12,7 @@ from .views import Product, ProductDetail, OrderAPIView, OrderDetailAPIView, \
     CompanyNameSoldDetailView, CompanyNameProductDetailView, WorkerProductAdminSendView, \
     WorkerProductAdminDetailSendView, WorkerProductNoConfirmedView, WorkerProductRejectView, TestOrderViewSet, \
     OrderAssignmentViewSet, WorkerProductOrderView, WorkerProductOrderDetailView, FinishedProductDetailView, \
-    CompanyBalanceDetailView, SoldGetView, UserSalaryMonthView
+    CompanyBalanceDetailView, SoldGetView, UserSalaryMonthView, UserSalaryDetailMonthView
 from rest_framework.routers import DefaultRouter
 
 router = DefaultRouter()
@@ -71,4 +71,6 @@ urlpatterns = [
     path('worker-product-order/', WorkerProductOrderView.as_view()),
     path('worker-product-order/<int:id>/', WorkerProductOrderDetailView.as_view()),
     path('user-salary/', UserSalaryMonthView.as_view()),
+    path('user-salary/<uuid:id>/', UserSalaryDetailMonthView.as_view()),
+
 ]

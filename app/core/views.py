@@ -1640,3 +1640,16 @@ class UserSalaryMonthView(APIView):
                 }, status=status.HTTP_201_CREATED
             )
         return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class UserSalaryDetailMonthView(APIView):
+    def delete(self, request, id):
+        try:
+            user_salary = UserSalaryMonth.objects.get(id=id)
+        except UserSalaryMonth.DoesNotExist:
+            return Response(data={'success': False, 'message': 'User salary not found'})
+
+        else:
+            user_salary.delete()
+            return Response(data={'success': True, 'message': 'User salary successfully deleted'})
+
